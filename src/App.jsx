@@ -1,5 +1,136 @@
 import { useState, useEffect, useRef } from "react";
+import logo from "./assets/calibrate-logo-teal.png";
 
+// ─── Password Protection ───
+const VALID_PASSWORD = "calibrate2026"; // Change this to your preferred password
+
+function LoginPage({ onLogin }) {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(false);
+    
+    setTimeout(() => {
+      if (password === VALID_PASSWORD) {
+        localStorage.setItem("calibrate-pricing-auth", "true");
+        onLogin();
+      } else {
+        setError(true);
+        setLoading(false);
+      }
+    }, 300);
+  };
+
+  return (
+    <div
+      style={{
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #1A4B84 0%, #2A8A94 100%)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontFamily: "'Inter', system-ui, sans-serif",
+        padding: 20,
+      }}
+    >
+      <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap"
+        rel="stylesheet"
+      />
+      <div
+        style={{
+          background: "#fff",
+          borderRadius: 16,
+          padding: "48px 40px",
+          width: "100%",
+          maxWidth: 400,
+          boxShadow: "0 20px 60px rgba(0,0,0,0.2)",
+        }}
+      >
+        <div style={{ textAlign: "center", marginBottom: 32 }}>
+          <img
+            src={logo}
+            alt="Calibrate HCM"
+            style={{ height: 40, marginBottom: 24 }}
+          />
+          <h1
+            style={{
+              fontSize: 22,
+              fontWeight: 700,
+              color: "#1E3A5F",
+              margin: 0,
+              fontFamily: "'Plus Jakarta Sans', sans-serif",
+            }}
+          >
+            Services Pricing Calculator
+          </h1>
+          <p style={{ fontSize: 14, color: "#64748B", marginTop: 8 }}>
+            Enter access code to continue
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Access code"
+            style={{
+              width: "100%",
+              padding: "14px 16px",
+              borderRadius: 8,
+              border: error ? "2px solid #EF4444" : "1px solid #E2E8F0",
+              fontSize: 16,
+              outline: "none",
+              boxSizing: "border-box",
+              transition: "border-color 0.15s ease",
+            }}
+            onFocus={(e) => {
+              if (!error) e.target.style.borderColor = "#3BB4C1";
+            }}
+            onBlur={(e) => {
+              if (!error) e.target.style.borderColor = "#E2E8F0";
+            }}
+          />
+          {error && (
+            <p style={{ color: "#EF4444", fontSize: 13, marginTop: 8, marginBottom: 0 }}>
+              Invalid access code. Please try again.
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={loading || !password}
+            style={{
+              width: "100%",
+              padding: "14px 16px",
+              borderRadius: 8,
+              border: "none",
+              background: loading || !password ? "#94A3B8" : "linear-gradient(135deg, #1A4B84 0%, #2A8A94 100%)",
+              color: "#fff",
+              fontSize: 15,
+              fontWeight: 600,
+              cursor: loading || !password ? "not-allowed" : "pointer",
+              marginTop: 16,
+              transition: "opacity 0.15s ease",
+            }}
+          >
+            {loading ? "Verifying..." : "Access Calculator"}
+          </button>
+        </form>
+
+        <p style={{ fontSize: 12, color: "#94A3B8", textAlign: "center", marginTop: 24 }}>
+          Contact your Calibrate representative for access
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Calculator ───
 const TIERS = [
   { label: "0–500", min: 0, max: 500, perItem: 1250, gpp: "42%" },
   { label: "500–1,500", min: 501, max: 1500, perItem: 1500, gpp: "53%" },
@@ -10,7 +141,6 @@ const TIERS = [
 
 const BASE_FEE = 1500;
 
-// Calibrate Brand Colors
 const colors = {
   teal: "#3BB4C1",
   tealLight: "#E8F7F8",
@@ -40,7 +170,6 @@ function getTier(ee) {
   return TIERS.find((t) => ee >= t.min && ee <= t.max) || TIERS[4];
 }
 
-// ─── Animated counter ───
 function AnimNum({ value }) {
   const [display, setDisplay] = useState(value);
   const ref = useRef(null);
@@ -64,7 +193,6 @@ function AnimNum({ value }) {
   return <span>{fmtNum(display)}</span>;
 }
 
-// ─── Section wrapper ───
 function Section({ title, children, icon }) {
   return (
     <div
@@ -117,7 +245,6 @@ function Section({ title, children, icon }) {
   );
 }
 
-// ─── Toggle chip ───
 function Toggle({ label, value, onChange, sub }) {
   return (
     <button
@@ -166,7 +293,6 @@ function Toggle({ label, value, onChange, sub }) {
   );
 }
 
-// ─── Number input ───
 function NumInput({ label, value, onChange, min = 0, max = 99999, suffix = "" }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
@@ -215,7 +341,6 @@ function NumInput({ label, value, onChange, min = 0, max = 99999, suffix = "" })
   );
 }
 
-// ─── Line item in summary ───
 function LineItem({ label, amount, note, sub }) {
   return (
     <div
@@ -258,7 +383,6 @@ function LineItem({ label, amount, note, sub }) {
   );
 }
 
-// ─── Custom scope flag ───
 function CustomFlag({ text }) {
   return (
     <div
@@ -289,8 +413,7 @@ function CustomFlag({ text }) {
   );
 }
 
-export default function App() {
-  // ─── State ───
+function Calculator({ onLogout }) {
   const [employees, setEmployees] = useState(250);
   const [migrationItems, setMigrationItems] = useState(3);
   const [downloadOnly, setDownloadOnly] = useState(false);
@@ -308,11 +431,9 @@ export default function App() {
   const [includeHandbook, setIncludeHandbook] = useState(false);
   const [hrPayroll, setHrPayroll] = useState(false);
 
-  // ─── Calculations ───
   const tier = getTier(employees);
   const itemCost = downloadOnly ? tier.perItem * 0.5 : tier.perItem;
-  const migrationTotal =
-    migrationItems > 0 ? BASE_FEE + migrationItems * itemCost : 0;
+  const migrationTotal = migrationItems > 0 ? BASE_FEE + migrationItems * itemCost : 0;
 
   const totalIntegrations = sftpCount + apiCount;
   const sftpCost = sftpCount * 7500;
@@ -340,36 +461,21 @@ export default function App() {
   const handbookCost = includeHandbook ? 5000 : 0;
 
   const oneTimeTotal =
-    migrationTotal +
-    integrationTotal +
-    aiOnboarding +
-    handbookCost +
-    techCost +
-    hrCost;
+    migrationTotal + integrationTotal + aiOnboarding + handbookCost + techCost + hrCost;
   const annualRecurring = maintenanceCost + storageCost + aiAnnual;
   const grandTotal = oneTimeTotal + annualRecurring;
 
   const customFlags = [];
   if (includePayrollExport)
-    customFlags.push(
-      "Payroll registers / tax report exports require custom scoping — not included in total."
-    );
+    customFlags.push("Payroll registers / tax report exports require custom scoping — not included in total.");
   if (newIntegration)
-    customFlags.push(
-      "New/uncommon integration system — may require additional pricing above standard rates."
-    );
+    customFlags.push("New/uncommon integration system — may require additional pricing above standard rates.");
   if (customDevHours > 0 && newIntegration)
-    customFlags.push(
-      "Custom dev hours for a new integration type should be reviewed for adjusted rates."
-    );
+    customFlags.push("Custom dev hours for a new integration type should be reviewed for adjusted rates.");
   if (hrPayroll)
-    customFlags.push(
-      "HR Payroll services (IMPACT) — requires custom scoping based on specific payroll needs."
-    );
+    customFlags.push("HR Payroll services (IMPACT) — requires custom scoping based on specific payroll needs.");
   if (includeHandbook)
-    customFlags.push(
-      "Handbook pricing ($5,000) is a standard estimate — complex situations may vary."
-    );
+    customFlags.push("Handbook pricing ($5,000) is a standard estimate — complex situations may vary.");
 
   return (
     <div
@@ -385,11 +491,11 @@ export default function App() {
         rel="stylesheet"
       />
 
-      {/* ─── Header ─── */}
+      {/* Header */}
       <div
         style={{
           background: `linear-gradient(135deg, ${colors.deepBlue} 0%, ${colors.tealDark} 100%)`,
-          padding: "40px 40px 36px",
+          padding: "32px 40px",
           marginBottom: 32,
         }}
       >
@@ -397,66 +503,57 @@ export default function App() {
           style={{
             maxWidth: 1200,
             margin: "0 auto",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "flex-start",
           }}
         >
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: 12,
-              marginBottom: 16,
-            }}
-          >
-            <div
+          <div>
+            <img
+              src={logo}
+              alt="Calibrate HCM"
+              style={{ height: 36, marginBottom: 16 }}
+            />
+            <h1
               style={{
-                width: 40,
-                height: 40,
-                borderRadius: 10,
-                background: "rgba(255,255,255,0.15)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 20,
+                fontSize: 28,
+                fontFamily: "'Plus Jakarta Sans', sans-serif",
+                fontWeight: 700,
+                margin: 0,
+                lineHeight: 1.2,
+                color: "#fff",
               }}
             >
-              📊
-            </div>
-            <span
+              Services Pricing Calculator
+            </h1>
+            <p
               style={{
-                fontSize: 13,
-                fontWeight: 600,
-                letterSpacing: "0.08em",
-                textTransform: "uppercase",
+                fontSize: 14,
                 color: "rgba(255,255,255,0.7)",
+                marginTop: 10,
+                maxWidth: 480,
+                lineHeight: 1.5,
               }}
             >
-              Calibrate HCM
-            </span>
+              Configure the services below to generate a pricing estimate.
+            </p>
           </div>
-          <h1
+          <button
+            onClick={onLogout}
             style={{
-              fontSize: 32,
-              fontFamily: "'Plus Jakarta Sans', sans-serif",
-              fontWeight: 700,
-              margin: 0,
-              lineHeight: 1.2,
-              color: "#fff",
+              padding: "8px 16px",
+              borderRadius: 6,
+              border: "1px solid rgba(255,255,255,0.3)",
+              background: "rgba(255,255,255,0.1)",
+              color: "rgba(255,255,255,0.9)",
+              fontSize: 13,
+              fontWeight: 500,
+              cursor: "pointer",
+              transition: "all 0.15s ease",
             }}
           >
-            Services Pricing Calculator
-          </h1>
-          <p
-            style={{
-              fontSize: 15,
-              color: "rgba(255,255,255,0.7)",
-              marginTop: 12,
-              maxWidth: 520,
-              lineHeight: 1.6,
-            }}
-          >
-            Configure the services below to generate a pricing estimate. Items
-            flagged for custom scoping are excluded from totals.
-          </p>
+            Sign Out
+          </button>
         </div>
       </div>
 
@@ -471,26 +568,12 @@ export default function App() {
           alignItems: "start",
         }}
       >
-        {/* ─── LEFT: Inputs ─── */}
+        {/* LEFT: Inputs */}
         <div>
-          {/* DATA MIGRATION */}
           <Section title="Data Migration" icon="📁">
-            <div
-              style={{ display: "flex", gap: 24, flexWrap: "wrap", marginBottom: 20 }}
-            >
-              <NumInput
-                label="Employees"
-                value={employees}
-                onChange={setEmployees}
-                suffix="EEs"
-              />
-              <NumInput
-                label="Migration Items"
-                value={migrationItems}
-                onChange={setMigrationItems}
-                max={100}
-                suffix="items"
-              />
+            <div style={{ display: "flex", gap: 24, flexWrap: "wrap", marginBottom: 20 }}>
+              <NumInput label="Employees" value={employees} onChange={setEmployees} suffix="EEs" />
+              <NumInput label="Migration Items" value={migrationItems} onChange={setMigrationItems} max={100} suffix="items" />
             </div>
             <div
               style={{
@@ -505,168 +588,61 @@ export default function App() {
               }}
             >
               <strong style={{ color: colors.tealDark }}>Tier: {tier.label} EEs</strong>
-              <span style={{ color: colors.textMuted }}> — {fmt(tier.perItem)}/item (upload + download) — {tier.gpp} GPP</span>
+              <span style={{ color: colors.textMuted }}> — {fmt(tier.perItem)}/item — {tier.gpp} GPP</span>
             </div>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <Toggle
-                label="Download only"
-                sub="(50% per-item)"
-                value={downloadOnly}
-                onChange={setDownloadOnly}
-              />
-              <Toggle
-                label="Payroll/tax export"
-                sub="(custom scope)"
-                value={includePayrollExport}
-                onChange={setIncludePayrollExport}
-              />
+              <Toggle label="Download only" sub="(50%)" value={downloadOnly} onChange={setDownloadOnly} />
+              <Toggle label="Payroll/tax export" sub="(custom)" value={includePayrollExport} onChange={setIncludePayrollExport} />
             </div>
           </Section>
 
-          {/* INTEGRATIONS */}
           <Section title="Integrations" icon="🔗">
-            <div
-              style={{ display: "flex", gap: 24, flexWrap: "wrap", marginBottom: 16 }}
-            >
-              <NumInput
-                label="SFTP Connections"
-                value={sftpCount}
-                onChange={setSftpCount}
-                max={20}
-                suffix="× $7,500"
-              />
-              <NumInput
-                label="API Connections"
-                value={apiCount}
-                onChange={setApiCount}
-                max={20}
-                suffix="× $10,000"
-              />
-              <NumInput
-                label="Custom Dev Hours"
-                value={customDevHours}
-                onChange={setCustomDevHours}
-                max={500}
-                suffix="× $175/hr"
-              />
+            <div style={{ display: "flex", gap: 24, flexWrap: "wrap", marginBottom: 16 }}>
+              <NumInput label="SFTP Connections" value={sftpCount} onChange={setSftpCount} max={20} suffix="× $7,500" />
+              <NumInput label="API Connections" value={apiCount} onChange={setApiCount} max={20} suffix="× $10,000" />
+              <NumInput label="Custom Dev Hours" value={customDevHours} onChange={setCustomDevHours} max={500} suffix="× $175/hr" />
             </div>
-            <Toggle
-              label="New / uncommon system"
-              sub="(may need adjusted pricing)"
-              value={newIntegration}
-              onChange={setNewIntegration}
-            />
+            <Toggle label="New / uncommon system" sub="(adjusted pricing)" value={newIntegration} onChange={setNewIntegration} />
             {totalIntegrations > 0 && (
-              <div
-                style={{ fontSize: 13, color: colors.textMuted, marginTop: 14 }}
-              >
-                📌 Maintenance: {totalIntegrations} integration
-                {totalIntegrations > 1 ? "s" : ""} × $250/mo ={" "}
-                <strong>{fmt(maintenanceCost)}/yr</strong> (billed annually)
+              <div style={{ fontSize: 13, color: colors.textMuted, marginTop: 14 }}>
+                📌 Maintenance: {totalIntegrations} × $250/mo = <strong>{fmt(maintenanceCost)}/yr</strong>
               </div>
             )}
           </Section>
 
-          {/* PLATFORM SERVICES */}
           <Section title="Platform Services" icon="☁️">
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <Toggle
-                label="Data Storage"
-                sub="$200/mo ($2,400/yr)"
-                value={includeStorage}
-                onChange={setIncludeStorage}
-              />
-              <Toggle
-                label="AI Agent"
-                sub="$2,500 setup + $300/mo"
-                value={includeAI}
-                onChange={setIncludeAI}
-              />
+              <Toggle label="Data Storage" sub="$200/mo" value={includeStorage} onChange={setIncludeStorage} />
+              <Toggle label="AI Agent" sub="$2,500 + $300/mo" value={includeAI} onChange={setIncludeAI} />
             </div>
           </Section>
 
-          {/* TECH CONSULTING */}
           <Section title="Technology Consulting" icon="💻">
-            <div
-              style={{
-                display: "flex",
-                gap: 24,
-                alignItems: "flex-end",
-                flexWrap: "wrap",
-                marginBottom: 16,
-              }}
-            >
-              <NumInput
-                label="Hours (per month)"
-                value={techHours}
-                onChange={setTechHours}
-                max={500}
-                suffix={`× ${fmt(techRate)}/hr`}
-              />
+            <div style={{ display: "flex", gap: 24, alignItems: "flex-end", flexWrap: "wrap", marginBottom: 16 }}>
+              <NumInput label="Hours (per month)" value={techHours} onChange={setTechHours} max={500} suffix={`× ${fmt(techRate)}/hr`} />
             </div>
-            <Toggle
-              label="IMPACT Contract"
-              sub="($150/hr, 6-mo min, 20 hrs/mo min)"
-              value={techImpact}
-              onChange={setTechImpact}
-            />
+            <Toggle label="IMPACT Contract" sub="($150/hr, 6-mo, 20 hrs/mo min)" value={techImpact} onChange={setTechImpact} />
             {techImpact && techHours < 20 && techHours > 0 && (
-              <div style={{ fontSize: 13, color: colors.warning, marginTop: 10 }}>
-                ⚠️ IMPACT minimum is 20 hrs/mo — billing will be calculated at 20
-                hours.
-              </div>
+              <div style={{ fontSize: 13, color: colors.warning, marginTop: 10 }}>⚠️ IMPACT min 20 hrs/mo</div>
             )}
           </Section>
 
-          {/* HR SERVICES */}
           <Section title="HR Services" icon="👥">
-            <div
-              style={{
-                display: "flex",
-                gap: 24,
-                alignItems: "flex-end",
-                flexWrap: "wrap",
-                marginBottom: 16,
-              }}
-            >
-              <NumInput
-                label="Hours (per month)"
-                value={hrHours}
-                onChange={setHrHours}
-                max={500}
-                suffix={`× ${fmt(hrRate)}/hr`}
-              />
+            <div style={{ display: "flex", gap: 24, alignItems: "flex-end", flexWrap: "wrap", marginBottom: 16 }}>
+              <NumInput label="Hours (per month)" value={hrHours} onChange={setHrHours} max={500} suffix={`× ${fmt(hrRate)}/hr`} />
             </div>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
-              <Toggle
-                label="IMPACT Contract"
-                sub="($100/hr, 6-mo min, 20 hrs/mo min)"
-                value={hrImpact}
-                onChange={setHrImpact}
-              />
-              <Toggle
-                label="Handbook"
-                sub="(~$5,000 one-time)"
-                value={includeHandbook}
-                onChange={setIncludeHandbook}
-              />
-              <Toggle
-                label="Payroll Services"
-                sub="(custom scope)"
-                value={hrPayroll}
-                onChange={setHrPayroll}
-              />
+              <Toggle label="IMPACT Contract" sub="($100/hr, 20 hrs/mo min)" value={hrImpact} onChange={setHrImpact} />
+              <Toggle label="Handbook" sub="(~$5,000)" value={includeHandbook} onChange={setIncludeHandbook} />
+              <Toggle label="Payroll Services" sub="(custom)" value={hrPayroll} onChange={setHrPayroll} />
             </div>
             {hrImpact && hrHours < 20 && hrHours > 0 && (
-              <div style={{ fontSize: 13, color: colors.warning, marginTop: 10 }}>
-                ⚠️ IMPACT minimum is 20 hrs/mo — billing will be calculated at 20
-                hours.
-              </div>
+              <div style={{ fontSize: 13, color: colors.warning, marginTop: 10 }}>⚠️ IMPACT min 20 hrs/mo</div>
             )}
           </Section>
         </div>
 
-        {/* ─── RIGHT: Summary ─── */}
+        {/* RIGHT: Summary */}
         <div
           style={{
             position: "sticky",
@@ -678,252 +654,75 @@ export default function App() {
             boxShadow: "0 4px 12px rgba(0,0,0,0.06)",
           }}
         >
-          <div
-            style={{
-              fontSize: 12,
-              fontWeight: 600,
-              letterSpacing: "0.08em",
-              textTransform: "uppercase",
-              color: colors.textMuted,
-              marginBottom: 20,
-            }}
-          >
+          <div style={{ fontSize: 12, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: colors.textMuted, marginBottom: 20 }}>
             Pricing Summary
           </div>
 
-          {/* One-time */}
           {migrationTotal > 0 && (
-            <LineItem
-              label="Data Migration"
-              amount={fmt(migrationTotal)}
-              sub={`${fmt(BASE_FEE)} base + ${migrationItems} items × ${fmt(itemCost)}${downloadOnly ? " (DL only)" : ""}`}
-            />
+            <LineItem label="Data Migration" amount={fmt(migrationTotal)} sub={`${fmt(BASE_FEE)} base + ${migrationItems} × ${fmt(itemCost)}`} />
           )}
-          {sftpCost > 0 && (
-            <LineItem label={`SFTP (${sftpCount})`} amount={fmt(sftpCost)} />
-          )}
-          {apiCost > 0 && (
-            <LineItem label={`API (${apiCount})`} amount={fmt(apiCost)} />
-          )}
-          {devCost > 0 && (
-            <LineItem
-              label={`Custom Dev (${customDevHours} hrs)`}
-              amount={fmt(devCost)}
-            />
-          )}
-          {aiOnboarding > 0 && (
-            <LineItem label="AI Agent Onboarding" amount={fmt(aiOnboarding)} />
-          )}
+          {sftpCost > 0 && <LineItem label={`SFTP (${sftpCount})`} amount={fmt(sftpCost)} />}
+          {apiCost > 0 && <LineItem label={`API (${apiCount})`} amount={fmt(apiCost)} />}
+          {devCost > 0 && <LineItem label={`Custom Dev (${customDevHours} hrs)`} amount={fmt(devCost)} />}
+          {aiOnboarding > 0 && <LineItem label="AI Agent Onboarding" amount={fmt(aiOnboarding)} />}
           {techCost > 0 && (
-            <LineItem
-              label={`Tech Consulting${techImpact ? " (IMPACT)" : ""}`}
-              amount={fmt(techCost)}
-              sub={`${techImpact ? Math.max(techHours, 20) : techHours} hrs × ${fmt(techRate)}/hr`}
-            />
+            <LineItem label={`Tech Consulting${techImpact ? " (IMPACT)" : ""}`} amount={fmt(techCost)} sub={`${techImpact ? Math.max(techHours, 20) : techHours} hrs × ${fmt(techRate)}/hr`} />
           )}
           {hrCost > 0 && (
-            <LineItem
-              label={`HR Consulting${hrImpact ? " (IMPACT)" : ""}`}
-              amount={fmt(hrCost)}
-              sub={`${hrImpact ? Math.max(hrHours, 20) : hrHours} hrs × ${fmt(hrRate)}/hr`}
-            />
+            <LineItem label={`HR Consulting${hrImpact ? " (IMPACT)" : ""}`} amount={fmt(hrCost)} sub={`${hrImpact ? Math.max(hrHours, 20) : hrHours} hrs × ${fmt(hrRate)}/hr`} />
           )}
-          {handbookCost > 0 && (
-            <LineItem label="HR Handbook" amount={fmt(handbookCost)} />
-          )}
+          {handbookCost > 0 && <LineItem label="HR Handbook" amount={fmt(handbookCost)} />}
 
           {oneTimeTotal > 0 && (
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                padding: "16px 0 10px",
-                borderTop: `2px solid ${colors.border}`,
-                marginTop: 8,
-              }}
-            >
-              <span
-                style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: colors.textMuted,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.04em",
-                }}
-              >
-                One-Time
-              </span>
-              <span
-                style={{
-                  fontSize: 20,
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
-                  fontWeight: 700,
-                  color: colors.text,
-                }}
-              >
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 0 10px", borderTop: `2px solid ${colors.border}`, marginTop: 8 }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: colors.textMuted, textTransform: "uppercase" }}>One-Time</span>
+              <span style={{ fontSize: 20, fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, color: colors.text }}>
                 $<AnimNum value={oneTimeTotal} />
               </span>
             </div>
           )}
 
-          {/* Recurring */}
           {annualRecurring > 0 && (
             <>
               <div style={{ height: 16 }} />
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: colors.textMuted,
-                  marginBottom: 10,
-                }}
-              >
-                Annual Recurring
-              </div>
-              {maintenanceCost > 0 && (
-                <LineItem
-                  label={`Integration Maint. (${totalIntegrations})`}
-                  amount={fmt(maintenanceCost)}
-                  sub="$250/mo per integration"
-                  note="/yr"
-                />
-              )}
-              {storageCost > 0 && (
-                <LineItem
-                  label="Data Storage"
-                  amount={fmt(storageCost)}
-                  sub="$200/mo"
-                  note="/yr"
-                />
-              )}
-              {aiAnnual > 0 && (
-                <LineItem
-                  label="AI Agent"
-                  amount={fmt(aiAnnual)}
-                  sub="$300/mo"
-                  note="/yr"
-                />
-              )}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  padding: "16px 0 10px",
-                  borderTop: `2px solid ${colors.border}`,
-                }}
-              >
-                <span
-                  style={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color: colors.textMuted,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.04em",
-                  }}
-                >
-                  Annual
-                </span>
-                <span
-                  style={{
-                    fontSize: 20,
-                    fontFamily: "'Plus Jakarta Sans', sans-serif",
-                    fontWeight: 700,
-                    color: colors.teal,
-                  }}
-                >
-                  $<AnimNum value={annualRecurring} />
-                  <span style={{ fontSize: 13, color: colors.textMuted, fontWeight: 500 }}>
-                    /yr
-                  </span>
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: colors.textMuted, marginBottom: 10 }}>Annual Recurring</div>
+              {maintenanceCost > 0 && <LineItem label={`Integration Maint. (${totalIntegrations})`} amount={fmt(maintenanceCost)} sub="$250/mo each" note="/yr" />}
+              {storageCost > 0 && <LineItem label="Data Storage" amount={fmt(storageCost)} sub="$200/mo" note="/yr" />}
+              {aiAnnual > 0 && <LineItem label="AI Agent" amount={fmt(aiAnnual)} sub="$300/mo" note="/yr" />}
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "16px 0 10px", borderTop: `2px solid ${colors.border}` }}>
+                <span style={{ fontSize: 13, fontWeight: 600, color: colors.textMuted, textTransform: "uppercase" }}>Annual</span>
+                <span style={{ fontSize: 20, fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 700, color: colors.teal }}>
+                  $<AnimNum value={annualRecurring} /><span style={{ fontSize: 13, color: colors.textMuted, fontWeight: 500 }}>/yr</span>
                 </span>
               </div>
             </>
           )}
 
-          {/* Grand total */}
-          <div
-            style={{
-              marginTop: 16,
-              padding: "20px",
-              borderRadius: 12,
-              background: `linear-gradient(135deg, ${colors.deepBlue} 0%, ${colors.tealDark} 100%)`,
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "baseline",
-              }}
-            >
-              <span
-                style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: "rgba(255,255,255,0.8)",
-                  textTransform: "uppercase",
-                  letterSpacing: "0.06em",
-                }}
-              >
-                Total (Year 1)
-              </span>
-              <span
-                style={{
-                  fontSize: 32,
-                  fontFamily: "'Plus Jakarta Sans', sans-serif",
-                  fontWeight: 800,
-                  color: "#fff",
-                }}
-              >
+          <div style={{ marginTop: 16, padding: "20px", borderRadius: 12, background: `linear-gradient(135deg, ${colors.deepBlue} 0%, ${colors.tealDark} 100%)` }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
+              <span style={{ fontSize: 13, fontWeight: 600, color: "rgba(255,255,255,0.8)", textTransform: "uppercase" }}>Total (Year 1)</span>
+              <span style={{ fontSize: 32, fontFamily: "'Plus Jakarta Sans', sans-serif", fontWeight: 800, color: "#fff" }}>
                 $<AnimNum value={grandTotal} />
               </span>
             </div>
             {annualRecurring > 0 && oneTimeTotal > 0 && (
-              <div
-                style={{
-                  fontSize: 12,
-                  color: "rgba(255,255,255,0.6)",
-                  textAlign: "right",
-                  marginTop: 6,
-                }}
-              >
-                {fmt(oneTimeTotal)} one-time + {fmt(annualRecurring)}/yr recurring
+              <div style={{ fontSize: 12, color: "rgba(255,255,255,0.6)", textAlign: "right", marginTop: 6 }}>
+                {fmt(oneTimeTotal)} one-time + {fmt(annualRecurring)}/yr
               </div>
             )}
           </div>
 
-          {/* Custom scope flags */}
           {customFlags.length > 0 && (
             <div style={{ marginTop: 20 }}>
-              <div
-                style={{
-                  fontSize: 11,
-                  fontWeight: 600,
-                  letterSpacing: "0.08em",
-                  textTransform: "uppercase",
-                  color: colors.warning,
-                  marginBottom: 8,
-                }}
-              >
+              <div style={{ fontSize: 11, fontWeight: 600, letterSpacing: "0.08em", textTransform: "uppercase", color: colors.warning, marginBottom: 8 }}>
                 Requires Custom Scoping
               </div>
-              {customFlags.map((f, i) => (
-                <CustomFlag key={i} text={f} />
-              ))}
+              {customFlags.map((f, i) => <CustomFlag key={i} text={f} />)}
             </div>
           )}
 
           {grandTotal === 0 && customFlags.length === 0 && (
-            <div
-              style={{
-                textAlign: "center",
-                padding: "40px 0",
-                color: colors.textMuted,
-                fontSize: 14,
-              }}
-            >
+            <div style={{ textAlign: "center", padding: "40px 0", color: colors.textMuted, fontSize: 14 }}>
               Configure services to see pricing
             </div>
           )}
@@ -931,4 +730,31 @@ export default function App() {
       </div>
     </div>
   );
+}
+
+// ─── App with Auth ───
+export default function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    const auth = localStorage.getItem("calibrate-pricing-auth");
+    if (auth === "true") {
+      setIsAuthenticated(true);
+    }
+  }, []);
+
+  const handleLogin = () => {
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("calibrate-pricing-auth");
+    setIsAuthenticated(false);
+  };
+
+  if (!isAuthenticated) {
+    return <LoginPage onLogin={handleLogin} />;
+  }
+
+  return <Calculator onLogout={handleLogout} />;
 }
