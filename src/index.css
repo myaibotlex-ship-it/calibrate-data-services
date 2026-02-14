@@ -6,7 +6,7 @@
 
 body {
   margin: 0;
-  background: #0F0F1A;
+  background: #F8FAFC;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -21,8 +21,19 @@ input[type=number] {
   -moz-appearance: textfield;
 }
 
+/* Mobile responsive */
 @media (max-width: 900px) {
-  body > div > div:last-child {
+  #root > div > div:nth-child(2) {
     grid-template-columns: 1fr !important;
+    padding: 0 20px 40px !important;
+  }
+  
+  #root > div > div:first-child {
+    padding: 32px 20px 28px !important;
+  }
+  
+  #root > div > div:nth-child(2) > div:last-child {
+    position: relative !important;
+    top: 0 !important;
   }
 }
