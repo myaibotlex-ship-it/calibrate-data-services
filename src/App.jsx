@@ -81,6 +81,7 @@ const createDefaultScenario = (name = "Scenario 1") => ({
   migrationItems: 3,
   yearsOfData: 5,
   downloadOnly: false,
+  isAddendum: false,
   includePayrollExport: false,
   payrollExportPrice: 1000,
   customDataItems: [],
@@ -126,8 +127,9 @@ function calculateTotals(s) {
   if (s.yearsOfData <= 3) itemCost *= 0.70; // 30% discount for 3 or fewer years
   else if (s.yearsOfData >= 10) itemCost *= 1.30;
   
-  // Only calculate if section is enabled
-  const migrationTotal = s.enableMigration && s.migrationItems > 0 ? BASE_FEE + s.migrationItems * itemCost : 0;
+  // Only calculate if section is enabled (addendum removes base fee)
+  const baseFee = s.isAddendum ? 0 : BASE_FEE;
+  const migrationTotal = s.enableMigration && s.migrationItems > 0 ? baseFee + s.migrationItems * itemCost : 0;
   const payrollExportCost = s.enableMigration && s.includePayrollExport ? s.payrollExportPrice : 0;
   const customDataItemsTotal = s.enableMigration ? s.customDataItems.reduce((sum, item) => sum + (item.price || 0), 0) : 0;
   
@@ -467,6 +469,7 @@ function Calculator({ onLogout }) {
               {s.yearsOfData >= 10 && <span style={{ color: colors.warning, marginLeft: 8 }}>+30% (10+ years)</span>}
             </div>
             <div style={{ display: "flex", gap: 12, flexWrap: "wrap", alignItems: "flex-end" }}>
+              <Toggle label="Addendum" sub="(no base fee)" value={s.isAddendum} onChange={(v) => updateScenario("isAddendum", v)} />
               <Toggle label="Download only" sub="(25% off items)" value={s.downloadOnly} onChange={(v) => updateScenario("downloadOnly", v)} />
               <Toggle label="Payroll/tax export" value={s.includePayrollExport} onChange={(v) => updateScenario("includePayrollExport", v)} />
               {s.includePayrollExport && (
@@ -619,7 +622,7 @@ function Calculator({ onLogout }) {
             Pricing Summary — {s.name}
           </div>
 
-          {totals.migrationTotal > 0 && <LineItem label="Data Migration" amount={fmt(totals.migrationTotal)} sub={`${fmt(BASE_FEE)} base + ${s.migrationItems} × ${fmt(Math.round(totals.itemCost))}${s.yearsOfData <= 3 ? ' (incl. ≤3 yr discount)' : ''}${s.yearsOfData >= 10 ? ' (incl. 10+ yr surcharge)' : ''}`} itemKey="migration" checked={isItemIncluded('migration')} onToggle={toggleItem} />}
+          {totals.migrationTotal > 0 && <LineItem label={s.isAddendum ? "Data Migration (Addendum)" : "Data Migration"} amount={fmt(totals.migrationTotal)} sub={s.isAddendum ? `${s.migrationItems} × ${fmt(Math.round(totals.itemCost))}${s.yearsOfData <= 3 ? ' (incl. ≤3 yr discount)' : ''}${s.yearsOfData >= 10 ? ' (incl. 10+ yr surcharge)' : ''} (no base fee)` : `${fmt(BASE_FEE)} base + ${s.migrationItems} × ${fmt(Math.round(totals.itemCost))}${s.yearsOfData <= 3 ? ' (incl. ≤3 yr discount)' : ''}${s.yearsOfData >= 10 ? ' (incl. 10+ yr surcharge)' : ''}`} itemKey="migration" checked={isItemIncluded('migration')} onToggle={toggleItem} />}
           {totals.payrollExportCost > 0 && <LineItem label="Payroll/Tax Export" amount={fmt(totals.payrollExportCost)} itemKey="payrollExport" checked={isItemIncluded('payrollExport')} onToggle={toggleItem} />}
           {s.customDataItems.map((item, idx) => item.price > 0 && <LineItem key={idx} label={item.name || `Custom Item ${idx + 1}`} amount={fmt(item.price)} itemKey={`custom_${idx}`} checked={isItemIncluded(`custom_${idx}`)} onToggle={toggleItem} />)}
           {totals.sftpCost > 0 && <LineItem label={`SFTP (${s.sftpCount})`} amount={fmt(totals.sftpCost)} sub={s.sftpCount > 1 ? `incl. volume discount` : '$7,500 each'} itemKey="sftp" checked={isItemIncluded('sftp')} onToggle={toggleItem} />}
