@@ -579,7 +579,7 @@ function Calculator({ onLogout }) {
             {s.impactEnabled && (
               <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
                 <div style={{ padding: 16, borderRadius: 8, background: s.impactTech ? colors.tealLight : colors.backgroundAlt, border: `1px solid ${s.impactTech ? colors.teal : colors.border}` }}>
-                  <Toggle label="Technology Consulting" value={s.impactTech} onChange={(v) => { updateScenario("impactTech", v); if (v && s.impactTechAddlRate === 150) updateScenario("impactTechAddlRate", s.impactTechRate); }} />
+                  <Toggle label="Technology Consulting" value={s.impactTech} onChange={(v) => { const updates = { impactTech: v }; if (v && s.impactTechAddlRate === 150) updates.impactTechAddlRate = s.impactTechRate; const updated = [...scenarios]; updated[activeIndex] = { ...updated[activeIndex], ...updates }; setScenarios(updated); }} />
                   {s.impactTech && (
                     <>
                       <div style={{ marginTop: 16, display: "flex", gap: 20, flexWrap: "wrap", alignItems: "flex-end" }}>
@@ -594,7 +594,7 @@ function Calculator({ onLogout }) {
                   )}
                 </div>
                 <div style={{ padding: 16, borderRadius: 8, background: s.impactHr ? colors.tealLight : colors.backgroundAlt, border: `1px solid ${s.impactHr ? colors.teal : colors.border}` }}>
-                  <Toggle label="HR Services" value={s.impactHr} onChange={(v) => { updateScenario("impactHr", v); if (v && s.impactHrAddlRate === 100) updateScenario("impactHrAddlRate", s.impactHrRate); }} />
+                  <Toggle label="HR Services" value={s.impactHr} onChange={(v) => { const updates = { impactHr: v }; if (v && s.impactHrAddlRate === 100) updates.impactHrAddlRate = s.impactHrRate; const updated = [...scenarios]; updated[activeIndex] = { ...updated[activeIndex], ...updates }; setScenarios(updated); }} />
                   {s.impactHr && (
                     <>
                       <div style={{ marginTop: 16, display: "flex", gap: 20, flexWrap: "wrap", alignItems: "flex-end" }}>
