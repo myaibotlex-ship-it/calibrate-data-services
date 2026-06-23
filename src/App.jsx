@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import logo from "./assets/calibrate-full-logo.png";
 
 // ─── Password Protection ───
-const VALID_PASSWORD = "calibrate2026";
+const VALID_PASSWORD = "DataSerivce@Calibrate";
 
 function LoginPage({ onLogin }) {
   const [password, setPassword] = useState("");
@@ -16,7 +16,7 @@ function LoginPage({ onLogin }) {
     
     setTimeout(() => {
       if (password === VALID_PASSWORD) {
-        localStorage.setItem("calibrate-pricing-auth", "true");
+        localStorage.setItem("calibrate-data-services-auth", "true");
         onLogin();
       } else {
         setError(true);
@@ -31,7 +31,7 @@ function LoginPage({ onLogin }) {
       <div style={{ background: "#fff", borderRadius: 16, padding: "48px 40px", width: "100%", maxWidth: 400, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
         <div style={{ textAlign: "center", marginBottom: 32 }}>
           <img src={logo} alt="Calibrate HCM" style={{ height: 48, marginBottom: 24 }} />
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#1E3A5F", margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Services Pricing Calculator</h1>
+          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#1E3A5F", margin: 0, fontFamily: "'Plus Jakarta Sans', sans-serif" }}>Data Migration Pricing</h1>
           <p style={{ fontSize: 14, color: "#64748B", marginTop: 8 }}>Enter access code to continue</p>
         </div>
         <form onSubmit={handleSubmit}>
@@ -698,7 +698,7 @@ function Calculator({ onLogout }) {
 // ─── App with Auth ───
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  useEffect(() => { const auth = localStorage.getItem("calibrate-pricing-auth"); if (auth === "true") setIsAuthenticated(true); }, []);
+  useEffect(() => { const auth = localStorage.getItem("calibrate-data-services-auth"); if (auth === "true") setIsAuthenticated(true); }, []);
   const handleLogin = () => setIsAuthenticated(true);
   const handleLogout = () => { localStorage.removeItem("calibrate-pricing-auth"); setIsAuthenticated(false); };
   if (!isAuthenticated) return <LoginPage onLogin={handleLogin} />;
