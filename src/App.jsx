@@ -18,7 +18,7 @@ const MIGRATION_ITEMS = [
   { label: "W-2s", type: "tiered" },
   { label: "1095-Cs", type: "tiered" },
   { label: "Timecards", type: "tiered" },
-  { label: "Time card reports by month", type: "annual", annualRate: 350 },
+  { label: "Timesheets - monthly", type: "annual", annualRate: 350 },
   { label: "HR documents (includes i9s, handbooks etc)", type: "tiered" },
   { label: "Performance reviews", type: "tiered" },
   { label: "Employee action forms", type: "tiered" },
@@ -178,7 +178,7 @@ function Calculator() {
         {!needsCustomPricing && (
           <>
             <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E2E8F0" }}>
-              <div>Base Fee ({employees <= 1500 ? "0-1,500 EEs" : "1,500+ EEs"})</div>
+              <div>Base Fee</div>
               <div style={{ fontWeight: 600 }}>{fmt(baseFee)}</div>
             </div>
             
@@ -189,7 +189,7 @@ function Calculator() {
 
             {annualItemsTotal > 0 && (
               <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E2E8F0" }}>
-                <div>Time Card Reports ({fmt(350)} × {yearsOfData} years)</div>
+                <div>Timesheets - monthly ({fmt(350)} × {yearsOfData} years)</div>
                 <div style={{ fontWeight: 600 }}>{fmt(annualItemsTotal)}</div>
               </div>
             )}
