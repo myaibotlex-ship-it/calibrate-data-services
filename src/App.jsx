@@ -183,7 +183,7 @@ function Calculator() {
             </div>
             
             <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E2E8F0" }}>
-              <div>Data Migration ({tieredItemCount} items × {fmt(itemCost)})</div>
+              <div>Data Migration</div>
               <div style={{ fontWeight: 600 }}>{fmt(tieredItemCount * itemCost)}</div>
             </div>
 
