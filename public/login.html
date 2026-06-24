@@ -108,20 +108,36 @@
       <h1>Data Migration Pricing</h1>
       <p>Enter the access password to continue.</p>
       <div class="error" id="error">Invalid password. Please try again.</div>
-      <form action="/api/login" method="post">
+      <form id="login-form">
         <input type="hidden" name="next" id="next" value="/" />
         <label>
           Password
-          <input name="password" type="password" autocomplete="current-password" autofocus required />
+          <input id="password" name="password" type="password" autocomplete="current-password" autofocus required />
         </label>
         <button type="submit">Access Calculator</button>
       </form>
     </main>
     <script>
+      const PASSWORD = "Calibrate+PEPL";
+      const AUTH_COOKIE = "calibrate_site_auth=calibrate-pepl-v1";
       const params = new URLSearchParams(window.location.search);
       const next = params.get("next");
       if (next) document.getElementById("next").value = next;
       if (params.get("error")) document.getElementById("error").style.display = "block";
+
+      document.getElementById("login-form").addEventListener("submit", (event) => {
+        event.preventDefault();
+        const password = document.getElementById("password").value;
+        const error = document.getElementById("error");
+
+        if (password !== PASSWORD) {
+          error.style.display = "block";
+          return;
+        }
+
+        document.cookie = `${AUTH_COOKIE}; Path=/; Max-Age=604800; SameSite=Lax; Secure`;
+        window.location.href = document.getElementById("next").value || "/";
+      });
     </script>
   </body>
 </html>

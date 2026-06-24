@@ -2,7 +2,7 @@ import { next } from "@vercel/functions";
 
 const AUTH_COOKIE = "calibrate_site_auth";
 const AUTH_TOKEN = "calibrate-pepl-v1";
-const PUBLIC_PATHS = new Set(["/login.html", "/api/login", "/favicon.ico"]);
+const PUBLIC_PATHS = new Set(["/login.html", "/favicon.ico"]);
 
 function hasAuthCookie(request) {
   const cookieHeader = request.headers.get("cookie") || "";
