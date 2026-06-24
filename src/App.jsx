@@ -8,22 +8,27 @@ const TIERS = [
   { label: "500–1,500", min: 501, max: 1500, perItem: 1500 },
   { label: "1,500–5,000", min: 1501, max: 5000, perItem: 1750 },
   { label: "5,000–10,000", min: 5001, max: 10000, perItem: 2800 },
-  { label: "10,000+", min: 10001, max: Infinity, perItem: 4200 },
+  { label: "10,001–15,000", min: 10001, max: 15000, perItem: 4200 },
+  { label: "15,001–25,000", min: 15001, max: 25000, perItem: 5200 },
+  { label: "25,000+", min: 25001, max: Infinity, perItem: 7000 },
 ];
 
 const MIGRATION_ITEMS = [
-  "Pay stubs",
-  "W2s / 1095Cs",
-  "Timecards",
-  "HR documents (includes i9s, handbooks etc)",
-  "Performance reviews",
-  "Personnel action forms",
-  "ATS data - applications and resumes",
-  "Learning course completion history"
+  { label: "Pay stubs", type: "tiered" },
+  { label: "W-2s", type: "tiered" },
+  { label: "1095-Cs", type: "tiered" },
+  { label: "Timecards", type: "tiered" },
+  { label: "Time card reports by month", type: "annual", annualRate: 350 },
+  { label: "HR documents (includes i9s, handbooks etc)", type: "tiered" },
+  { label: "Performance reviews", type: "tiered" },
+  { label: "Employee action forms", type: "tiered" },
+  { label: "ATS data - applications and resumes", type: "tiered" },
+  { label: "Learning course completion history", type: "tiered" },
+  { label: "Other item", type: "custom" }
 ];
 
 const getBaseFee = (ee) => ee <= 1500 ? 1000 : 1500;
-const getTier = (ee) => TIERS.find((t) => ee >= t.min && ee <= t.max) || TIERS[4];
+const getTier = (ee) => TIERS.find((t) => ee >= t.min && ee <= t.max) || TIERS[TIERS.length - 1];
 const fmt = (n) => n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 });
 
 function LoginPage({ onLogin }) {
@@ -70,15 +75,22 @@ function Calculator() {
   const [employees, setEmployees] = useState(250);
   const [selectedItems, setSelectedItems] = useState([]);
   const [yearsOfData, setYearsOfData] = useState(5);
+  const [otherItem, setOtherItem] = useState("");
 
   const tier = getTier(employees);
   let itemCost = tier.perItem;
-  if (yearsOfData <= 3) itemCost *= 0.70;
+  if (yearsOfData <= 3) itemCost *= 0.85;
   else if (yearsOfData >= 10) itemCost *= 1.30;
 
   const baseFee = getBaseFee(employees);
-  const itemCount = selectedItems.length;
-  const migrationTotal = itemCount > 0 ? baseFee + (itemCount * itemCost) : 0;
+  const selectedMigrationItems = selectedItems.map((index) => MIGRATION_ITEMS[index]);
+  const needsCustomPricing = selectedMigrationItems.some((item) => item.type === "custom");
+  const tieredItemCount = selectedMigrationItems.filter((item) => item.type === "tiered").length;
+  const annualItemsTotal = selectedMigrationItems
+    .filter((item) => item.type === "annual")
+    .reduce((total, item) => total + (item.annualRate * yearsOfData), 0);
+  const migrationItemsTotal = (tieredItemCount * itemCost) + annualItemsTotal;
+  const migrationTotal = selectedItems.length > 0 ? baseFee + migrationItemsTotal : 0;
 
   const toggleItem = (index) => {
     if (selectedItems.includes(index)) {
@@ -119,7 +131,7 @@ function Calculator() {
               style={{ width: "100%", marginTop: 6, padding: "12px 14px", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: 18, fontWeight: 600 }} 
             />
             <div style={{ fontSize: 12, color: "#64748B", marginTop: 4 }}>
-              {yearsOfData <= 3 && "30% discount applied"} 
+              {yearsOfData <= 3 && "15% discount applied"} 
               {yearsOfData >= 10 && "30% premium applied"}
             </div>
           </div>
@@ -134,31 +146,60 @@ function Calculator() {
                     checked={selectedItems.includes(index)}
                     onChange={() => toggleItem(index)}
                   />
-                  {item}
+                  {item.label}
                 </label>
               ))}
             </div>
+            {needsCustomPricing && (
+              <div style={{ marginTop: 12 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase" }}>Other Item Details</label>
+                <input
+                  type="text"
+                  value={otherItem}
+                  onChange={(e) => setOtherItem(e.target.value)}
+                  placeholder="Describe the item you need priced"
+                  style={{ width: "100%", marginTop: 6, padding: "12px 14px", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: 15 }}
+                />
+              </div>
+            )}
           </div>
         </div>
       </div>
 
       <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, padding: 24 }}>
         <div style={{ fontSize: 13, fontWeight: 600, color: "#64748B", marginBottom: 16, textTransform: "uppercase" }}>Pricing Summary</div>
-        
-        <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E2E8F0" }}>
-          <div>Base Fee ({employees <= 1500 ? "0-1,500 EEs" : "1,500+ EEs"})</div>
-          <div style={{ fontWeight: 600 }}>{fmt(baseFee)}</div>
-        </div>
-        
-        <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E2E8F0" }}>
-          <div>Data Migration ({itemCount} items × {fmt(itemCost)})</div>
-          <div style={{ fontWeight: 600 }}>{fmt(itemCount * itemCost)}</div>
-        </div>
 
-        <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 16, marginTop: 8, fontSize: 18, fontWeight: 700 }}>
-          <div>Total</div>
-          <div style={{ color: "#0D9488" }}>{fmt(migrationTotal)}</div>
-        </div>
+        {needsCustomPricing && (
+          <div style={{ background: "#F0FDFA", border: "1px solid #99F6E4", borderRadius: 8, padding: 16, color: "#134E4A", fontWeight: 600, marginBottom: 16 }}>
+            Custom pricing needed{otherItem.trim() ? ` for ${otherItem.trim()}` : ""}
+          </div>
+        )}
+        
+        {!needsCustomPricing && (
+          <>
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E2E8F0" }}>
+              <div>Base Fee ({employees <= 1500 ? "0-1,500 EEs" : "1,500+ EEs"})</div>
+              <div style={{ fontWeight: 600 }}>{fmt(baseFee)}</div>
+            </div>
+            
+            <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E2E8F0" }}>
+              <div>Data Migration ({tieredItemCount} items × {fmt(itemCost)})</div>
+              <div style={{ fontWeight: 600 }}>{fmt(tieredItemCount * itemCost)}</div>
+            </div>
+
+            {annualItemsTotal > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E2E8F0" }}>
+                <div>Time Card Reports ({fmt(350)} × {yearsOfData} years)</div>
+                <div style={{ fontWeight: 600 }}>{fmt(annualItemsTotal)}</div>
+              </div>
+            )}
+
+            <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 16, marginTop: 8, fontSize: 18, fontWeight: 700 }}>
+              <div>Total</div>
+              <div style={{ color: "#0D9488" }}>{fmt(migrationTotal)}</div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );
