@@ -31,9 +31,10 @@ const getBaseFee = (ee) => ee <= 1500 ? 1000 : 1500;
 const getTier = (ee) => TIERS.find((t) => ee >= t.min && ee <= t.max) || TIERS[TIERS.length - 1];
 const fmt = (n) => n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 });
 const TIMESHEET_OPTIONS = {
-  monthly: { label: "By month", annualRate: 350 },
-  payPeriod: { label: "By pay period", annualRate: 450 },
+  monthly: { label: "By month", annualRate: 200 },
+  payPeriod: { label: "By pay period", annualRate: 300 },
 };
+const LEARNING_HISTORY_LABEL = "Learning course completion history";
 
 function LoginPage({ onLogin }) {
   const [password, setPassword] = useState("");
@@ -81,6 +82,9 @@ function Calculator() {
   const [yearsOfData, setYearsOfData] = useState(5);
   const [otherItem, setOtherItem] = useState("");
   const [timesheetOption, setTimesheetOption] = useState("monthly");
+  const [includeLearningCertificates, setIncludeLearningCertificates] = useState(false);
+  const [extractionOnly, setExtractionOnly] = useState(false);
+  const [systems, setSystems] = useState([{ from: "", to: "" }]);
 
   const tier = getTier(employees);
   let itemCost = tier.perItem;
@@ -91,17 +95,40 @@ function Calculator() {
   const selectedMigrationItems = selectedItems.map((index) => MIGRATION_ITEMS[index]);
   const needsCustomPricing = selectedMigrationItems.some((item) => item.type === "custom");
   const includesTimesheets = selectedMigrationItems.some((item) => item.type === "timesheets");
+  const includesLearningHistory = selectedMigrationItems.some((item) => item.label === LEARNING_HISTORY_LABEL);
   const tieredItemCount = selectedMigrationItems.filter((item) => item.type === "tiered").length;
+  const learningCertificateCount = includesLearningHistory && includeLearningCertificates ? 1 : 0;
   const timesheetsTotal = includesTimesheets ? TIMESHEET_OPTIONS[timesheetOption].annualRate * yearsOfData : 0;
-  const migrationItemsTotal = (tieredItemCount * itemCost) + timesheetsTotal;
-  const migrationTotal = selectedItems.length > 0 ? baseFee + migrationItemsTotal : 0;
+  const dataMigrationTotal = (tieredItemCount + learningCertificateCount) * itemCost;
+  const migrationItemsTotal = dataMigrationTotal + timesheetsTotal;
+  const migrationSubtotal = selectedItems.length > 0 ? baseFee + migrationItemsTotal : 0;
+  const extractionOnlyDiscount = extractionOnly ? migrationSubtotal * 0.30 : 0;
+  const migrationTotal = migrationSubtotal - extractionOnlyDiscount;
 
   const toggleItem = (index) => {
+    const item = MIGRATION_ITEMS[index];
     if (selectedItems.includes(index)) {
+      if (item.label === LEARNING_HISTORY_LABEL) {
+        setIncludeLearningCertificates(false);
+      }
       setSelectedItems(selectedItems.filter(i => i !== index));
     } else {
       setSelectedItems([...selectedItems, index]);
     }
+  };
+
+  const updateSystem = (index, field, value) => {
+    setSystems(systems.map((system, currentIndex) => (
+      currentIndex === index ? { ...system, [field]: value } : system
+    )));
+  };
+
+  const addSystem = () => {
+    setSystems([...systems, { from: "", to: "" }]);
+  };
+
+  const removeSystem = (index) => {
+    setSystems(systems.filter((_, currentIndex) => currentIndex !== index));
   };
 
   return (
@@ -112,8 +139,58 @@ function Calculator() {
         <p style={{ color: "#64748B", marginTop: 8 }}>Calibrate HCM — Data Services</p>
       </div>
 
+      <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 8, padding: "14px 16px", color: "#1E3A5F", fontSize: 14, fontWeight: 600, marginBottom: 24 }}>
+        All standard migration projects included extraction from previous vendor and import to new vendor
+      </div>
+
       <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, padding: 24, marginBottom: 24 }}>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase", marginBottom: 8, display: "block" }}>Systems</label>
+            <div style={{ display: "grid", gap: 12 }}>
+              {systems.map((system, index) => (
+                <div key={index} style={{ display: "flex", gap: 10, alignItems: "end", flexWrap: "wrap" }}>
+                  <div style={{ flex: "1 1 190px" }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: "#64748B" }}>Extracting from</label>
+                    <input
+                      type="text"
+                      value={system.from}
+                      onChange={(e) => updateSystem(index, "from", e.target.value)}
+                      placeholder="Previous vendor"
+                      style={{ width: "100%", marginTop: 6, padding: "10px 12px", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: 14 }}
+                    />
+                  </div>
+                  <div style={{ flex: "1 1 190px" }}>
+                    <label style={{ fontSize: 11, fontWeight: 600, color: "#64748B" }}>Going to</label>
+                    <input
+                      type="text"
+                      value={system.to}
+                      onChange={(e) => updateSystem(index, "to", e.target.value)}
+                      placeholder="New vendor"
+                      style={{ width: "100%", marginTop: 6, padding: "10px 12px", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: 14 }}
+                    />
+                  </div>
+                  {systems.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeSystem(index)}
+                      style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #E2E8F0", background: "#fff", color: "#64748B", cursor: "pointer" }}
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={addSystem}
+              style={{ marginTop: 12, padding: "10px 12px", borderRadius: 8, border: "1px solid #0D9488", background: "#F0FDFA", color: "#0F766E", fontWeight: 600, cursor: "pointer" }}
+            >
+              Add extraction system
+            </button>
+          </div>
+
           <div>
             <label style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase" }}>Employees</label>
             <input 
@@ -185,6 +262,24 @@ function Calculator() {
                 </div>
               </div>
             )}
+            {includesLearningHistory && (
+              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer", marginTop: 12 }}>
+                <input
+                  type="checkbox"
+                  checked={includeLearningCertificates}
+                  onChange={(e) => setIncludeLearningCertificates(e.target.checked)}
+                />
+                Learning certificates
+              </label>
+            )}
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer", marginTop: 16 }}>
+              <input
+                type="checkbox"
+                checked={extractionOnly}
+                onChange={(e) => setExtractionOnly(e.target.checked)}
+              />
+              Extraction only
+            </label>
           </div>
         </div>
       </div>
@@ -207,13 +302,20 @@ function Calculator() {
             
             <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E2E8F0" }}>
               <div>Data Migration</div>
-              <div style={{ fontWeight: 600 }}>{fmt(tieredItemCount * itemCost)}</div>
+              <div style={{ fontWeight: 600 }}>{fmt(dataMigrationTotal)}</div>
             </div>
 
             {includesTimesheets && (
               <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E2E8F0" }}>
                 <div>Timesheets</div>
                 <div style={{ fontWeight: 600 }}>{fmt(timesheetsTotal)}</div>
+              </div>
+            )}
+
+            {extractionOnly && migrationSubtotal > 0 && (
+              <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E2E8F0" }}>
+                <div>Extraction Only Discount</div>
+                <div style={{ fontWeight: 600 }}>-{fmt(extractionOnlyDiscount)}</div>
               </div>
             )}
 
