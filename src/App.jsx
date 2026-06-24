@@ -26,7 +26,7 @@ const MIGRATION_GROUPS = [
     name: "Payroll",
     items: [
       { label: "Pay stubs", type: "tiered" },
-      { label: "Check registers", type: "tiered" },
+      { label: "Check registers", type: "discountedTiered", discount: 0.40 },
     ],
   },
   {
@@ -207,8 +207,11 @@ function Calculator() {
   const tieredItemCount = selectedMigrationItems.filter((item) => item.type === "tiered").length;
   const halfTieredItemCount = selectedMigrationItems.filter((item) => item.type === "halfTiered").length;
   const halfTieredTotal = halfTieredItemCount * itemCost * 0.50;
+  const discountedTieredTotal = selectedMigrationItems
+    .filter((item) => item.type === "discountedTiered")
+    .reduce((total, item) => total + (itemCost * (1 - item.discount)), 0);
   const timesheetsTotal = includesTimesheets ? TIMESHEET_OPTIONS[timesheetOption].annualRate * yearsOfData : 0;
-  const dataMigrationTotal = (tieredItemCount * itemCost) + halfTieredTotal;
+  const dataMigrationTotal = (tieredItemCount * itemCost) + halfTieredTotal + discountedTieredTotal;
   const migrationItemsTotal = dataMigrationTotal + timesheetsTotal;
   const migrationSubtotal = selectedItems.length > 0 ? baseFee + migrationItemsTotal : 0;
   const extractionOnlyDiscount = extractionOnly ? migrationSubtotal * 0.30 : 0;
