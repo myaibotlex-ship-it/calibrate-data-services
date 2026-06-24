@@ -96,9 +96,9 @@ function Calculator() {
   const includesTimesheets = selectedMigrationItems.some((item) => item.type === "timesheets");
   const includesLearningHistory = selectedMigrationItems.some((item) => item.label === LEARNING_HISTORY_LABEL);
   const tieredItemCount = selectedMigrationItems.filter((item) => item.type === "tiered").length;
-  const learningCertificateCount = includesLearningHistory && includeLearningCertificates ? 1 : 0;
+  const learningCertificatesTotal = includesLearningHistory && includeLearningCertificates ? itemCost * 0.50 : 0;
   const timesheetsTotal = includesTimesheets ? TIMESHEET_OPTIONS[timesheetOption].annualRate * yearsOfData : 0;
-  const dataMigrationTotal = (tieredItemCount + learningCertificateCount) * itemCost;
+  const dataMigrationTotal = (tieredItemCount * itemCost) + learningCertificatesTotal;
   const migrationItemsTotal = dataMigrationTotal + timesheetsTotal;
   const migrationSubtotal = selectedItems.length > 0 ? baseFee + migrationItemsTotal : 0;
   const extractionOnlyDiscount = extractionOnly ? migrationSubtotal * 0.30 : 0;
