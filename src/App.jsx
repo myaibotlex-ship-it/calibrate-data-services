@@ -1,39 +1,70 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import logo from "./assets/calibrate-full-logo.png";
 
 const VALID_PASSWORD = "DataSe…rate";
 
 const TIERS = [
-  { label: "0–500", min: 0, max: 500, perItem: 1250 },
-  { label: "500–1,500", min: 501, max: 1500, perItem: 1500 },
-  { label: "1,500–5,000", min: 1501, max: 5000, perItem: 1750 },
-  { label: "5,000–10,000", min: 5001, max: 10000, perItem: 2800 },
-  { label: "10,001–15,000", min: 10001, max: 15000, perItem: 4200 },
-  { label: "15,001–25,000", min: 15001, max: 25000, perItem: 5200 },
-  { label: "25,000+", min: 25001, max: Infinity, perItem: 7000 },
+  { label: "0-500", min: 0, max: 500, perItem: 1250 },
+  { label: "501-1,500", min: 501, max: 1500, perItem: 1500 },
+  { label: "1,501-5,000", min: 1501, max: 5000, perItem: 1750 },
+  { label: "5,001-10,000", min: 5001, max: 10000, perItem: 2800 },
+  { label: "10,001-15,000", min: 10001, max: 15000, perItem: 4200 },
+  { label: "15,001-25,000", min: 15001, max: 25000, perItem: 5200 },
+  { label: "25,001+", min: 25001, max: Infinity, perItem: 7000 },
 ];
 
-const MIGRATION_ITEMS = [
-  { label: "Pay stubs", type: "tiered" },
-  { label: "W-2s", type: "tiered" },
-  { label: "1095-Cs", type: "tiered" },
-  { label: "Timecards", type: "tiered" },
-  { label: "Timesheets", type: "timesheets" },
-  { label: "HR documents (includes i9s, handbooks etc)", type: "tiered" },
-  { label: "Performance reviews", type: "tiered" },
-  { label: "Employee action forms", type: "tiered" },
-  { label: "ATS data - applications and resumes", type: "tiered" },
-  { label: "Learning course completion history", type: "tiered" }
+const MIGRATION_GROUPS = [
+  {
+    name: "Employee Data",
+    items: [
+      { label: "Pay stubs", type: "tiered" },
+      { label: "Timecards", type: "tiered" },
+      { label: "HR documents (includes i9s, handbooks etc)", type: "tiered" },
+      { label: "Employee action forms", type: "tiered" },
+    ],
+  },
+  {
+    name: "Tax & Compliance",
+    items: [
+      { label: "W-2s", type: "tiered" },
+      { label: "1095-Cs", type: "tiered" },
+    ],
+  },
+  {
+    name: "Learning",
+    items: [
+      { label: "Learning course completion history", type: "tiered" },
+    ],
+  },
+  {
+    name: "Time & Attendance",
+    items: [
+      { label: "Timesheets", type: "timesheets" },
+    ],
+  },
+  {
+    name: "Recruiting",
+    items: [
+      { label: "ATS data - applications and resumes", type: "tiered" },
+      { label: "Performance reviews", type: "tiered" },
+    ],
+  },
 ];
 
-const getBaseFee = (ee) => ee <= 1500 ? 1000 : 1500;
-const getTier = (ee) => TIERS.find((t) => ee >= t.min && ee <= t.max) || TIERS[TIERS.length - 1];
-const fmt = (n) => n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 });
+const MIGRATION_ITEMS = MIGRATION_GROUPS.flatMap((group) => (
+  group.items.map((item) => ({ ...item, category: group.name }))
+));
+
 const TIMESHEET_OPTIONS = {
   monthly: { label: "By month", annualRate: 200 },
   payPeriod: { label: "By pay period", annualRate: 300 },
 };
+
 const LEARNING_HISTORY_LABEL = "Learning course completion history";
+
+const getBaseFee = (ee) => ee <= 1500 ? 1000 : 1500;
+const getTier = (ee) => TIERS.find((t) => ee >= t.min && ee <= t.max) || TIERS[TIERS.length - 1];
+const fmt = (n) => n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 });
 
 const getImageDataUrl = async (src) => {
   const response = await fetch(src);
@@ -61,7 +92,7 @@ function LoginPage({ onLogin }) {
     e.preventDefault();
     setLoading(true);
     setError(false);
-    
+
     setTimeout(() => {
       if (password === VALID_PASSWORD) {
         localStorage.setItem("calibrate-data-services-auth", "true");
@@ -74,20 +105,64 @@ function LoginPage({ onLogin }) {
   };
 
   return (
-    <div style={{ minHeight: "100vh", background: "linear-gradient(135deg, #1A4B84 0%, #2A8A94 100%)", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "system-ui, sans-serif", padding: 20 }}>
-      <div style={{ background: "#fff", borderRadius: 16, padding: "48px 40px", width: "100%", maxWidth: 400, boxShadow: "0 20px 60px rgba(0,0,0,0.2)" }}>
-        <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <img src={logo} alt="Calibrate HCM" style={{ height: 48, marginBottom: 24 }} />
-          <h1 style={{ fontSize: 22, fontWeight: 700, color: "#1E3A5F", margin: 0 }}>Data Migration Pricing</h1>
-          <p style={{ fontSize: 14, color: "#64748B", marginTop: 8 }}>Enter access code to continue</p>
+    <div className="login-page">
+      <div className="login-card">
+        <div className="login-header">
+          <img src={logo} alt="Calibrate HCM" />
+          <h1>Data Migration Pricing</h1>
+          <p>Enter access code to continue</p>
         </div>
         <form onSubmit={handleSubmit}>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Access code" style={{ width: "100%", padding: "14px 16px", borderRadius: 8, border: error ? "2px solid #EF4444" : "1px solid #E2E8F0", fontSize: 16, outline: "none", boxSizing: "border-box" }} />
-          {error && <p style={{ color: "#EF4444", fontSize: 13, marginTop: 8, marginBottom: 0 }}>Invalid access code. Please try again.</p>}
-          <button type="submit" disabled={loading || !password} style={{ width: "100%", padding: "14px 16px", borderRadius: 8, border: "none", background: loading || !password ? "#94A3B8" : "linear-gradient(135deg, #1A4B84 0%, #2A8A94 100%)", color: "#fff", fontSize: 15, fontWeight: 600, cursor: loading || !password ? "not-allowed" : "pointer", marginTop: 16 }}>{loading ? "Verifying..." : "Access Calculator"}</button>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="Access code"
+            className={error ? "field-error" : ""}
+          />
+          {error && <p className="error-message">Invalid access code. Please try again.</p>}
+          <button type="submit" disabled={loading || !password}>
+            {loading ? "Verifying..." : "Access Calculator"}
+          </button>
         </form>
-        <p style={{ fontSize: 12, color: "#94A3B8", textAlign: "center", marginTop: 24 }}>Contact your Calibrate representative for access</p>
+        <p className="login-note">Contact your Calibrate representative for access</p>
       </div>
+    </div>
+  );
+}
+
+function CollapsibleSection({ id, step, title, complete, open, onToggle, children }) {
+  return (
+    <section className={`quote-section ${open ? "is-open" : ""}`}>
+      <button className="section-header" type="button" onClick={() => onToggle(id)}>
+        <span className="section-step">{step}</span>
+        <span>
+          <span className="section-title">{title}</span>
+          <span className={`section-status ${complete ? "complete" : ""}`}>
+            {complete ? "Complete" : "Needs input"}
+          </span>
+        </span>
+        <span className="section-toggle">{open ? "-" : "+"}</span>
+      </button>
+      {open && <div className="section-body">{children}</div>}
+    </section>
+  );
+}
+
+function Field({ label, children, className = "" }) {
+  return (
+    <label className={`field ${className}`}>
+      <span>{label}</span>
+      {children}
+    </label>
+  );
+}
+
+function SummaryRow({ label, value, negative = false }) {
+  return (
+    <div className="summary-row">
+      <span>{label}</span>
+      <strong className={negative ? "negative" : ""}>{negative ? "-" : ""}{value}</strong>
     </div>
   );
 }
@@ -107,6 +182,13 @@ function Calculator() {
     phone: "",
     company: "",
     address: "",
+  });
+  const [openSections, setOpenSections] = useState({
+    client: true,
+    systems: true,
+    scope: true,
+    items: true,
+    options: true,
   });
 
   const tier = getTier(employees);
@@ -128,13 +210,32 @@ function Calculator() {
   const extractionOnlyDiscount = extractionOnly ? migrationSubtotal * 0.30 : 0;
   const migrationTotal = migrationSubtotal - extractionOnlyDiscount;
 
+  const trimmedOtherItems = otherItems.map((item) => item.trim()).filter(Boolean);
+  const firstSystemComplete = Boolean(systems[0]?.from.trim() && systems[0]?.to.trim());
+  const clientComplete = Boolean(clientInfo.name.trim() || clientInfo.company.trim());
+  const itemsComplete = selectedItems.length > 0 || needsCustomPricing;
+  const quoteIssues = useMemo(() => {
+    const issues = [];
+    if (!clientComplete) issues.push("Add a client or company name.");
+    if (!firstSystemComplete) issues.push("Add the primary extraction and destination systems.");
+    if (employees <= 0) issues.push("Enter employee count.");
+    if (yearsOfData <= 0) issues.push("Enter years of data.");
+    if (!itemsComplete) issues.push("Select at least one migration item or add an other item.");
+    return issues;
+  }, [clientComplete, employees, firstSystemComplete, itemsComplete, yearsOfData]);
+  const quoteReady = quoteIssues.length === 0;
+
+  const toggleSection = (id) => {
+    setOpenSections((current) => ({ ...current, [id]: !current[id] }));
+  };
+
   const toggleItem = (index) => {
     const item = MIGRATION_ITEMS[index];
     if (selectedItems.includes(index)) {
       if (item.label === LEARNING_HISTORY_LABEL) {
         setIncludeLearningCertificates(false);
       }
-      setSelectedItems(selectedItems.filter(i => i !== index));
+      setSelectedItems(selectedItems.filter((i) => i !== index));
     } else {
       setSelectedItems([...selectedItems, index]);
     }
@@ -173,6 +274,8 @@ function Calculator() {
   };
 
   const handleSavePdf = async () => {
+    if (!quoteReady) return;
+
     const { jsPDF } = await import("jspdf");
     const doc = new jsPDF({ unit: "pt", format: "letter" });
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -263,10 +366,10 @@ function Calculator() {
     if (includeLearningCertificates) labelValue("Learning Certificates", "Included");
     if (extractionOnly) labelValue("Extraction Only", "30% discount applied");
     if (otherItems.length > 0) {
-      labelValue("Other Items", otherItems.filter((item) => item.trim()).join(", ") || "Custom items requested");
+      labelValue("Other Items", trimmedOtherItems.join(", ") || "Custom items requested");
     }
 
-    sectionTitle("Pricing Summary");
+    sectionTitle(needsCustomPricing ? "Partial Pricing Summary" : "Pricing Summary");
     summaryRow("Base Fee", fmt(baseFee));
     summaryRow("Data Migration", fmt(dataMigrationTotal));
     if (includesTimesheets) summaryRow("Timesheets", fmt(timesheetsTotal));
@@ -275,7 +378,7 @@ function Calculator() {
     doc.setDrawColor(226, 232, 240);
     doc.line(margin, y, pageWidth - margin, y);
     y += 20;
-    summaryRow("Total", fmt(migrationTotal), true);
+    summaryRow(needsCustomPricing ? "Quoted Total Excluding Custom Items" : "Total", fmt(migrationTotal), true);
 
     if (needsCustomPricing) {
       checkPage(46);
@@ -300,162 +403,173 @@ function Calculator() {
   };
 
   return (
-    <div style={{ maxWidth: 720, margin: "0 auto", padding: "40px 20px", fontFamily: "system-ui, sans-serif" }}>
-      <div style={{ textAlign: "center", marginBottom: 32 }}>
-        <img src={logo} alt="Calibrate HCM" style={{ height: 48, marginBottom: 16 }} />
-        <h1 style={{ fontSize: 28, fontWeight: 700, color: "#1E3A5F", margin: 0 }}>Data Migration Pricing</h1>
-        <p style={{ color: "#64748B", marginTop: 8 }}>Calibrate HCM — Data Services</p>
-      </div>
+    <div className="app-shell">
+      <header className="app-header">
+        <img src={logo} alt="Calibrate HCM" />
+        <div>
+          <h1>Data Migration Pricing</h1>
+          <p>Calibrate HCM Data Services</p>
+        </div>
+      </header>
 
-      <div style={{ background: "#EFF6FF", border: "1px solid #BFDBFE", borderRadius: 8, padding: "14px 16px", color: "#1E3A5F", fontSize: 14, fontWeight: 600, marginBottom: 24 }}>
+      <div className="notice-banner">
         All standard migration projects included extraction from previous vendor and import to new vendor
       </div>
 
-      <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, padding: 24, marginBottom: 24 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: "#64748B", marginBottom: 16, textTransform: "uppercase" }}>Client Information</div>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase" }}>Client Name</label>
-            <input
-              type="text"
-              value={clientInfo.name}
-              onChange={(e) => updateClientInfo("name", e.target.value)}
-              style={{ width: "100%", marginTop: 6, padding: "12px 14px", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: 15 }}
-            />
+      <div className="quote-layout">
+        <main className="quote-main">
+          <div className="step-nav" aria-label="Quote steps">
+            {[
+              ["1", "Client", clientComplete],
+              ["2", "Systems", firstSystemComplete],
+              ["3", "Scope", employees > 0 && yearsOfData > 0],
+              ["4", "Items", itemsComplete],
+            ].map(([number, label, complete]) => (
+              <span className={`step-pill ${complete ? "complete" : ""}`} key={label}>
+                <span>{number}</span>{label}
+              </span>
+            ))}
           </div>
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase" }}>Company Name</label>
-            <input
-              type="text"
-              value={clientInfo.company}
-              onChange={(e) => updateClientInfo("company", e.target.value)}
-              style={{ width: "100%", marginTop: 6, padding: "12px 14px", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: 15 }}
-            />
-          </div>
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase" }}>Email</label>
-            <input
-              type="email"
-              value={clientInfo.email}
-              onChange={(e) => updateClientInfo("email", e.target.value)}
-              style={{ width: "100%", marginTop: 6, padding: "12px 14px", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: 15 }}
-            />
-          </div>
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase" }}>Phone</label>
-            <input
-              type="tel"
-              value={clientInfo.phone}
-              onChange={(e) => updateClientInfo("phone", e.target.value)}
-              style={{ width: "100%", marginTop: 6, padding: "12px 14px", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: 15 }}
-            />
-          </div>
-          <div style={{ gridColumn: "1 / -1" }}>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase" }}>Address</label>
-            <textarea
-              value={clientInfo.address}
-              onChange={(e) => updateClientInfo("address", e.target.value)}
-              rows={3}
-              style={{ width: "100%", marginTop: 6, padding: "12px 14px", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: 15, fontFamily: "inherit", resize: "vertical" }}
-            />
-          </div>
-        </div>
-      </div>
 
-      <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, padding: 24, marginBottom: 24 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20 }}>
-          <div style={{ gridColumn: "1 / -1" }}>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase", marginBottom: 8, display: "block" }}>Systems</label>
-            <div style={{ display: "grid", gap: 12 }}>
+          <CollapsibleSection
+            id="client"
+            step="1"
+            title="Client Information"
+            complete={clientComplete}
+            open={openSections.client}
+            onToggle={toggleSection}
+          >
+            <div className="form-grid">
+              <Field label="Client Name">
+                <input type="text" value={clientInfo.name} onChange={(e) => updateClientInfo("name", e.target.value)} />
+              </Field>
+              <Field label="Company Name">
+                <input type="text" value={clientInfo.company} onChange={(e) => updateClientInfo("company", e.target.value)} />
+              </Field>
+              <Field label="Email">
+                <input type="email" value={clientInfo.email} onChange={(e) => updateClientInfo("email", e.target.value)} />
+              </Field>
+              <Field label="Phone">
+                <input type="tel" value={clientInfo.phone} onChange={(e) => updateClientInfo("phone", e.target.value)} />
+              </Field>
+              <Field label="Address" className="span-all">
+                <textarea value={clientInfo.address} onChange={(e) => updateClientInfo("address", e.target.value)} rows={3} />
+              </Field>
+            </div>
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            id="systems"
+            step="2"
+            title="Systems"
+            complete={firstSystemComplete}
+            open={openSections.systems}
+            onToggle={toggleSection}
+          >
+            <div className="stack">
               {systems.map((system, index) => (
-                <div key={index} style={{ display: "flex", gap: 10, alignItems: "end", flexWrap: "wrap" }}>
-                  <div style={{ flex: "1 1 190px" }}>
-                    <label style={{ fontSize: 11, fontWeight: 600, color: "#64748B" }}>Extracting from</label>
+                <div className="system-row" key={index}>
+                  <Field label="Extracting From">
                     <input
                       type="text"
                       value={system.from}
                       onChange={(e) => updateSystem(index, "from", e.target.value)}
                       placeholder="Previous vendor"
-                      style={{ width: "100%", marginTop: 6, padding: "10px 12px", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: 14 }}
                     />
-                  </div>
-                  <div style={{ flex: "1 1 190px" }}>
-                    <label style={{ fontSize: 11, fontWeight: 600, color: "#64748B" }}>Going to</label>
+                  </Field>
+                  <Field label="Going To">
                     <input
                       type="text"
                       value={system.to}
                       onChange={(e) => updateSystem(index, "to", e.target.value)}
                       placeholder="New vendor"
-                      style={{ width: "100%", marginTop: 6, padding: "10px 12px", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: 14 }}
                     />
-                  </div>
+                  </Field>
                   {systems.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeSystem(index)}
-                      style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #E2E8F0", background: "#fff", color: "#64748B", cursor: "pointer" }}
-                    >
+                    <button className="ghost-button" type="button" onClick={() => removeSystem(index)}>
                       Remove
                     </button>
                   )}
                 </div>
               ))}
             </div>
-            <button
-              type="button"
-              onClick={addSystem}
-              style={{ marginTop: 12, padding: "10px 12px", borderRadius: 8, border: "1px solid #0D9488", background: "#F0FDFA", color: "#0F766E", fontWeight: 600, cursor: "pointer" }}
-            >
+            <button className="secondary-button" type="button" onClick={addSystem}>
               Add extraction system
             </button>
-          </div>
+          </CollapsibleSection>
 
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase" }}>Employees</label>
-            <input 
-              type="text" 
-              inputMode="numeric" 
-              value={employees} 
-              onChange={(e) => setEmployees(Math.max(0, parseInt(e.target.value) || 0))} 
-              style={{ width: "100%", marginTop: 6, padding: "12px 14px", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: 18, fontWeight: 600 }} 
-            />
-          </div>
-
-          <div>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase" }}>Years of Data</label>
-            <input 
-              type="text" 
-              inputMode="numeric" 
-              value={yearsOfData} 
-              onChange={(e) => setYearsOfData(Math.max(0, parseInt(e.target.value) || 0))} 
-              style={{ width: "100%", marginTop: 6, padding: "12px 14px", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: 18, fontWeight: 600 }} 
-            />
-            <div style={{ fontSize: 12, color: "#64748B", marginTop: 4 }}>
-              {yearsOfData <= 3 && "15% discount applied"} 
-              {yearsOfData >= 10 && "30% premium applied"}
+          <CollapsibleSection
+            id="scope"
+            step="3"
+            title="Project Scope"
+            complete={employees > 0 && yearsOfData > 0}
+            open={openSections.scope}
+            onToggle={toggleSection}
+          >
+            <div className="form-grid compact">
+              <Field label="Employees">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={employees}
+                  onChange={(e) => setEmployees(Math.max(0, parseInt(e.target.value) || 0))}
+                  className="large-input"
+                />
+              </Field>
+              <Field label="Years of Data">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={yearsOfData}
+                  onChange={(e) => setYearsOfData(Math.max(0, parseInt(e.target.value) || 0))}
+                  className="large-input"
+                />
+                <small>
+                  {yearsOfData <= 3 && "15% discount applied"}
+                  {yearsOfData >= 10 && "30% premium applied"}
+                  {yearsOfData > 3 && yearsOfData < 10 && "Standard data range"}
+                </small>
+              </Field>
             </div>
-          </div>
+          </CollapsibleSection>
 
-          <div style={{ gridColumn: "1 / -1" }}>
-            <label style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase", marginBottom: 8, display: "block" }}>Data Migration Items (select all that apply)</label>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "8px 16px" }}>
-              {MIGRATION_ITEMS.map((item, index) => (
-                <label key={index} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
-                  <input 
-                    type="checkbox" 
-                    checked={selectedItems.includes(index)}
-                    onChange={() => toggleItem(index)}
-                  />
-                  {item.label}
-                </label>
+          <CollapsibleSection
+            id="items"
+            step="4"
+            title="Migration Items"
+            complete={itemsComplete}
+            open={openSections.items}
+            onToggle={toggleSection}
+          >
+            <div className="migration-groups">
+              {MIGRATION_GROUPS.map((group) => (
+                <div className="item-group" key={group.name}>
+                  <h3>{group.name}</h3>
+                  <div className="checkbox-list">
+                    {group.items.map((item) => {
+                      const index = MIGRATION_ITEMS.findIndex((migrationItem) => migrationItem.label === item.label);
+                      return (
+                        <label className="checkbox-card" key={item.label}>
+                          <input
+                            type="checkbox"
+                            checked={selectedItems.includes(index)}
+                            onChange={() => toggleItem(index)}
+                          />
+                          <span>{item.label}</span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
               ))}
             </div>
+
             {includesTimesheets && (
-              <div style={{ marginTop: 12 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase" }}>Timesheet Pricing</label>
-                <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
+              <div className="sub-panel">
+                <h3>Timesheets</h3>
+                <div className="segmented-control">
                   {Object.entries(TIMESHEET_OPTIONS).map(([value, option]) => (
-                    <label key={value} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
+                    <label className={timesheetOption === value ? "selected" : ""} key={value}>
                       <input
                         type="radio"
                         name="timesheet-option"
@@ -469,126 +583,129 @@ function Calculator() {
                 </div>
               </div>
             )}
+
             {includesLearningHistory && (
-              <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer", marginTop: 12 }}>
+              <div className="sub-panel">
+                <label className="checkbox-card inline">
+                  <input
+                    type="checkbox"
+                    checked={includeLearningCertificates}
+                    onChange={(e) => setIncludeLearningCertificates(e.target.checked)}
+                  />
+                  <span>Learning certificates</span>
+                </label>
+              </div>
+            )}
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            id="options"
+            step="5"
+            title="Additional Options"
+            complete
+            open={openSections.options}
+            onToggle={toggleSection}
+          >
+            <div className="sub-panel">
+              <label className="checkbox-card inline">
                 <input
                   type="checkbox"
-                  checked={includeLearningCertificates}
-                  onChange={(e) => setIncludeLearningCertificates(e.target.checked)}
+                  checked={extractionOnly}
+                  onChange={(e) => setExtractionOnly(e.target.checked)}
                 />
-                Learning certificates
+                <span>Extraction only</span>
               </label>
-            )}
-          </div>
-        </div>
-      </div>
+            </div>
 
-      <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, padding: 24, marginBottom: 24 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: "#64748B", marginBottom: 16, textTransform: "uppercase" }}>Additional Options</div>
+            <div className="custom-items">
+              <div className="custom-items-header">
+                <div>
+                  <h3>Other Items</h3>
+                  <p>Items outside the standard list will need custom pricing.</p>
+                </div>
+                <button className="secondary-button" type="button" onClick={addOtherItem}>
+                  Add other item
+                </button>
+              </div>
 
-        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
-          <input
-            type="checkbox"
-            checked={extractionOnly}
-            onChange={(e) => setExtractionOnly(e.target.checked)}
-          />
-          Extraction only
-        </label>
+              {otherItems.length > 0 && (
+                <div className="stack">
+                  {otherItems.map((item, index) => (
+                    <div className="other-row" key={index}>
+                      <input
+                        type="text"
+                        value={item}
+                        onChange={(e) => updateOtherItem(index, e.target.value)}
+                        placeholder="Describe the item you need priced"
+                      />
+                      <button className="ghost-button" type="button" onClick={() => removeOtherItem(index)}>
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </CollapsibleSection>
+        </main>
 
-        <div style={{ marginTop: 18 }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+        <aside className="summary-panel" aria-label="Pricing summary">
+          <div className="summary-header">
             <div>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase" }}>Other Items</div>
-              <div style={{ color: "#64748B", fontSize: 13, marginTop: 4 }}>Items outside the standard list will need custom pricing.</div>
+              <span>{needsCustomPricing ? "Partial Estimate" : "Pricing Summary"}</span>
+              <h2>{fmt(migrationTotal)}</h2>
             </div>
             <button
+              className="primary-button"
               type="button"
-              onClick={addOtherItem}
-              style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #0D9488", background: "#F0FDFA", color: "#0F766E", fontWeight: 600, cursor: "pointer" }}
+              onClick={handleSavePdf}
+              disabled={!quoteReady}
+              title={quoteReady ? "Download PDF summary" : "Complete required quote inputs first"}
             >
-              Add other item
+              Save to PDF
             </button>
           </div>
 
-          {otherItems.length > 0 && (
-            <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
-              {otherItems.map((item, index) => (
-                <div key={index} style={{ display: "flex", gap: 10, alignItems: "center" }}>
-                  <input
-                    type="text"
-                    value={item}
-                    onChange={(e) => updateOtherItem(index, e.target.value)}
-                    placeholder="Describe the item you need priced"
-                    style={{ flex: "1 1 auto", minWidth: 0, padding: "12px 14px", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: 15 }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => removeOtherItem(index)}
-                    style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #E2E8F0", background: "#fff", color: "#64748B", cursor: "pointer" }}
-                  >
-                    Remove
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, padding: 24 }}>
-        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 16 }}>
-          <div style={{ fontSize: 13, fontWeight: 600, color: "#64748B", textTransform: "uppercase" }}>Pricing Summary</div>
-          <button
-            type="button"
-            onClick={handleSavePdf}
-            style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #0D9488", background: "#0D9488", color: "#fff", fontWeight: 600, cursor: "pointer" }}
-          >
-            Save to PDF
-          </button>
-        </div>
-
-        {needsCustomPricing && (
-          <div style={{ background: "#F0FDFA", border: "1px solid #99F6E4", borderRadius: 8, padding: 16, color: "#134E4A", fontWeight: 600, marginBottom: 16 }}>
-            Custom pricing needed for other item{otherItems.length > 1 ? "s" : ""}
-            {otherItems.some((item) => item.trim()) ? `: ${otherItems.filter((item) => item.trim()).join(", ")}` : ""}
-          </div>
-        )}
-        
-        <>
-          <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E2E8F0" }}>
-            <div>Base Fee</div>
-            <div style={{ fontWeight: 600 }}>{fmt(baseFee)}</div>
-          </div>
-          
-          <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E2E8F0" }}>
-            <div>Data Migration</div>
-            <div style={{ fontWeight: 600 }}>{fmt(dataMigrationTotal)}</div>
-          </div>
-
-          {includesTimesheets && (
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E2E8F0" }}>
-              <div>Timesheets</div>
-              <div style={{ fontWeight: 600 }}>{fmt(timesheetsTotal)}</div>
+          {!quoteReady && (
+            <div className="readiness-card">
+              <strong>Required quote inputs</strong>
+              <ul>
+                {quoteIssues.map((issue) => <li key={issue}>{issue}</li>)}
+              </ul>
             </div>
           )}
 
-          {extractionOnly && migrationSubtotal > 0 && (
-            <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E2E8F0" }}>
-              <div>Extraction Only Discount</div>
-              <div style={{ fontWeight: 600 }}>-{fmt(extractionOnlyDiscount)}</div>
+          {needsCustomPricing && (
+            <div className="custom-note">
+              Custom pricing needed for other item{otherItems.length > 1 ? "s" : ""}
+              {trimmedOtherItems.length > 0 ? `: ${trimmedOtherItems.join(", ")}` : ""}
             </div>
           )}
 
-          <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 16, marginTop: 8, fontSize: 18, fontWeight: 700 }}>
-            <div>Total</div>
-            <div style={{ color: "#0D9488" }}>{fmt(migrationTotal)}</div>
+          <div className="summary-lines">
+            <SummaryRow label="Base Fee" value={fmt(baseFee)} />
+            <SummaryRow label="Data Migration" value={fmt(dataMigrationTotal)} />
+            {includesTimesheets && <SummaryRow label="Timesheets" value={fmt(timesheetsTotal)} />}
+            {extractionOnly && migrationSubtotal > 0 && (
+              <SummaryRow label="Extraction Only Discount" value={fmt(extractionOnlyDiscount)} negative />
+            )}
           </div>
-        </>
-        {needsCustomPricing && (
-          <div style={{ color: "#64748B", fontSize: 13, marginTop: 12 }}>
-            Total shown excludes custom-priced other items.
+
+          <div className="summary-total">
+            <span>{needsCustomPricing ? "Quoted Total Excluding Custom Items" : "Total"}</span>
+            <strong>{fmt(migrationTotal)}</strong>
           </div>
-        )}
+
+          {needsCustomPricing && (
+            <p className="summary-footnote">Total shown excludes custom-priced other items.</p>
+          )}
+
+          <div className="summary-meta">
+            <span>{selectedItems.length} standard item{selectedItems.length === 1 ? "" : "s"} selected</span>
+            <span>{tier.label} employees</span>
+            <span>{yearsOfData} year{yearsOfData === 1 ? "" : "s"} of data</span>
+          </div>
+        </aside>
       </div>
     </div>
   );
