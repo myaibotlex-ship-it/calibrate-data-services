@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import logo from "./assets/calibrate-full-logo.png";
 
-const VALID_PASSWORD = "DataSe…rate";
+const VALID_PASSWORD = "Calibrate+PEPL";
+const AUTH_STORAGE_KEY = "calibrate-data-services-auth";
+const AUTH_COOKIE = "calibrate_site_auth=calibrate-pepl-v1";
 
 const TIERS = [
   { label: "0-500", min: 0, max: 500, perItem: 1250 },
@@ -100,7 +102,7 @@ function LoginPage({ onLogin }) {
 
     setTimeout(() => {
       if (password === VALID_PASSWORD) {
-        localStorage.setItem("calibrate-data-services-auth", "true");
+        localStorage.setItem(AUTH_STORAGE_KEY, VALID_PASSWORD);
         onLogin();
       } else {
         setError(true);
@@ -177,6 +179,7 @@ function Calculator() {
   const [selectedItems, setSelectedItems] = useState([]);
   const [yearsOfData, setYearsOfData] = useState(5);
   const [otherItems, setOtherItems] = useState([]);
+  const [notes, setNotes] = useState("");
   const [timesheetOption, setTimesheetOption] = useState("monthly");
   const [extractionOnly, setExtractionOnly] = useState(false);
   const [systems, setSystems] = useState([{ from: "", to: "" }]);
@@ -370,6 +373,7 @@ function Calculator() {
     if (otherItems.length > 0) {
       labelValue("Other Items", trimmedOtherItems.join(", ") || "Custom items requested");
     }
+    labelValue("Notes", notes);
 
     sectionTitle(needsCustomPricing ? "Partial Pricing Summary" : "Pricing Summary");
     summaryRow("Base Fee", fmt(baseFee));
@@ -633,6 +637,21 @@ function Calculator() {
                 </div>
               )}
             </div>
+
+            <div className="custom-items">
+              <div className="custom-items-header">
+                <div>
+                  <h3>Notes</h3>
+                  <p>Add context, assumptions, or follow-up details for this quote.</p>
+                </div>
+              </div>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Add notes for the pricing summary"
+                rows={4}
+              />
+            </div>
           </CollapsibleSection>
         </main>
 
@@ -700,8 +719,10 @@ function Calculator() {
 
 export default function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const hasStoredAuth = localStorage.getItem(AUTH_STORAGE_KEY) === VALID_PASSWORD;
+  const hasCookieAuth = document.cookie.includes(AUTH_COOKIE);
 
-  if (localStorage.getItem("calibrate-data-services-auth") === "true" && !isAuthenticated) {
+  if ((hasStoredAuth || hasCookieAuth) && !isAuthenticated) {
     setIsAuthenticated(true);
   }
 

@@ -512,6 +512,14 @@ input[type=number] {
   margin: 4px 0 0;
 }
 
+.custom-items + .custom-items {
+  margin-top: 14px;
+}
+
+.custom-items textarea {
+  margin-top: 12px;
+}
+
 .summary-panel {
   padding: 20px;
   position: sticky;
