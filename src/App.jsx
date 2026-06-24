@@ -35,6 +35,23 @@ const TIMESHEET_OPTIONS = {
 };
 const LEARNING_HISTORY_LABEL = "Learning course completion history";
 
+const getImageDataUrl = async (src) => {
+  const response = await fetch(src);
+  const blob = await response.blob();
+
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+};
+
+const safeFilename = (value) => {
+  const name = value.trim().replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "");
+  return name || "data-migration-pricing-summary";
+};
+
 function LoginPage({ onLogin }) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState(false);
@@ -84,6 +101,13 @@ function Calculator() {
   const [includeLearningCertificates, setIncludeLearningCertificates] = useState(false);
   const [extractionOnly, setExtractionOnly] = useState(false);
   const [systems, setSystems] = useState([{ from: "", to: "" }]);
+  const [clientInfo, setClientInfo] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    company: "",
+    address: "",
+  });
 
   const tier = getTier(employees);
   let itemCost = tier.perItem;
@@ -144,6 +168,137 @@ function Calculator() {
     setOtherItems(otherItems.filter((_, currentIndex) => currentIndex !== index));
   };
 
+  const updateClientInfo = (field, value) => {
+    setClientInfo({ ...clientInfo, [field]: value });
+  };
+
+  const handleSavePdf = async () => {
+    const { jsPDF } = await import("jspdf");
+    const doc = new jsPDF({ unit: "pt", format: "letter" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 44;
+    const contentWidth = pageWidth - (margin * 2);
+    let y = 42;
+
+    const checkPage = (needed = 40) => {
+      if (y + needed <= pageHeight - margin) return;
+      doc.addPage();
+      y = margin;
+    };
+
+    const sectionTitle = (title) => {
+      checkPage(34);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(12);
+      doc.setTextColor(30, 58, 95);
+      doc.text(title.toUpperCase(), margin, y);
+      y += 8;
+      doc.setDrawColor(226, 232, 240);
+      doc.line(margin, y, pageWidth - margin, y);
+      y += 18;
+    };
+
+    const labelValue = (label, value) => {
+      if (value === undefined || value === null || value === "") return;
+      checkPage(24);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(100, 116, 139);
+      doc.text(label, margin, y);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(15, 23, 42);
+      const lines = doc.splitTextToSize(String(value), contentWidth - 150);
+      doc.text(lines, margin + 150, y);
+      y += Math.max(18, lines.length * 14);
+    };
+
+    const summaryRow = (label, value, strong = false) => {
+      checkPage(24);
+      doc.setFont("helvetica", strong ? "bold" : "normal");
+      doc.setFontSize(strong ? 12 : 10);
+      doc.setTextColor(15, 23, 42);
+      doc.text(label, margin, y);
+      doc.text(value, pageWidth - margin, y, { align: "right" });
+      y += 20;
+    };
+
+    try {
+      const logoData = await getImageDataUrl(logo);
+      doc.addImage(logoData, "PNG", margin, y - 10, 150, 36);
+    } catch {
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(16);
+      doc.setTextColor(30, 58, 95);
+      doc.text("Calibrate HCM", margin, y + 8);
+    }
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.setTextColor(30, 58, 95);
+    doc.text("Data Migration Pricing Summary", pageWidth - margin, y + 8, { align: "right" });
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text(new Date().toLocaleDateString(), pageWidth - margin, y + 26, { align: "right" });
+    y += 70;
+
+    sectionTitle("Client Information");
+    labelValue("Client Name", clientInfo.name);
+    labelValue("Company", clientInfo.company);
+    labelValue("Email", clientInfo.email);
+    labelValue("Phone", clientInfo.phone);
+    labelValue("Address", clientInfo.address);
+
+    sectionTitle("Systems");
+    systems.forEach((system, index) => {
+      labelValue(`System ${index + 1}`, `${system.from || "Previous vendor"} to ${system.to || "New vendor"}`);
+    });
+
+    sectionTitle("Project Details");
+    labelValue("Employees", employees.toLocaleString("en-US"));
+    labelValue("Years of Data", yearsOfData);
+    labelValue("Selected Items", selectedMigrationItems.map((item) => item.label).join(", ") || "None selected");
+    if (includesTimesheets) labelValue("Timesheet Pricing", TIMESHEET_OPTIONS[timesheetOption].label);
+    if (includeLearningCertificates) labelValue("Learning Certificates", "Included");
+    if (extractionOnly) labelValue("Extraction Only", "30% discount applied");
+    if (otherItems.length > 0) {
+      labelValue("Other Items", otherItems.filter((item) => item.trim()).join(", ") || "Custom items requested");
+    }
+
+    sectionTitle("Pricing Summary");
+    summaryRow("Base Fee", fmt(baseFee));
+    summaryRow("Data Migration", fmt(dataMigrationTotal));
+    if (includesTimesheets) summaryRow("Timesheets", fmt(timesheetsTotal));
+    if (extractionOnly && migrationSubtotal > 0) summaryRow("Extraction Only Discount", `-${fmt(extractionOnlyDiscount)}`);
+    y += 4;
+    doc.setDrawColor(226, 232, 240);
+    doc.line(margin, y, pageWidth - margin, y);
+    y += 20;
+    summaryRow("Total", fmt(migrationTotal), true);
+
+    if (needsCustomPricing) {
+      checkPage(46);
+      doc.setFillColor(240, 253, 250);
+      doc.setDrawColor(153, 246, 228);
+      doc.roundedRect(margin, y, contentWidth, 42, 6, 6, "FD");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(19, 78, 74);
+      doc.text("Custom pricing is needed for other items. Total shown excludes custom-priced items.", margin + 12, y + 25);
+      y += 60;
+    }
+
+    checkPage(54);
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    const note = "All standard migration projects include extraction from previous vendor and import to new vendor.";
+    doc.text(doc.splitTextToSize(note, contentWidth), margin, pageHeight - 34);
+
+    doc.save(`${safeFilename(clientInfo.company || clientInfo.name)}.pdf`);
+  };
+
   return (
     <div style={{ maxWidth: 720, margin: "0 auto", padding: "40px 20px", fontFamily: "system-ui, sans-serif" }}>
       <div style={{ textAlign: "center", marginBottom: 32 }}>
@@ -157,7 +312,58 @@ function Calculator() {
       </div>
 
       <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, padding: 24, marginBottom: 24 }}>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#64748B", marginBottom: 16, textTransform: "uppercase" }}>Client Information</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 16 }}>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase" }}>Client Name</label>
+            <input
+              type="text"
+              value={clientInfo.name}
+              onChange={(e) => updateClientInfo("name", e.target.value)}
+              style={{ width: "100%", marginTop: 6, padding: "12px 14px", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: 15 }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase" }}>Company Name</label>
+            <input
+              type="text"
+              value={clientInfo.company}
+              onChange={(e) => updateClientInfo("company", e.target.value)}
+              style={{ width: "100%", marginTop: 6, padding: "12px 14px", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: 15 }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase" }}>Email</label>
+            <input
+              type="email"
+              value={clientInfo.email}
+              onChange={(e) => updateClientInfo("email", e.target.value)}
+              style={{ width: "100%", marginTop: 6, padding: "12px 14px", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: 15 }}
+            />
+          </div>
+          <div>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase" }}>Phone</label>
+            <input
+              type="tel"
+              value={clientInfo.phone}
+              onChange={(e) => updateClientInfo("phone", e.target.value)}
+              style={{ width: "100%", marginTop: 6, padding: "12px 14px", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: 15 }}
+            />
+          </div>
+          <div style={{ gridColumn: "1 / -1" }}>
+            <label style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase" }}>Address</label>
+            <textarea
+              value={clientInfo.address}
+              onChange={(e) => updateClientInfo("address", e.target.value)}
+              rows={3}
+              style={{ width: "100%", marginTop: 6, padding: "12px 14px", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: 15, fontFamily: "inherit", resize: "vertical" }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, padding: 24, marginBottom: 24 }}>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 20 }}>
           <div style={{ gridColumn: "1 / -1" }}>
             <label style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase", marginBottom: 8, display: "block" }}>Systems</label>
             <div style={{ display: "grid", gap: 12 }}>
@@ -232,7 +438,7 @@ function Calculator() {
 
           <div style={{ gridColumn: "1 / -1" }}>
             <label style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase", marginBottom: 8, display: "block" }}>Data Migration Items (select all that apply)</label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "8px 16px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: "8px 16px" }}>
               {MIGRATION_ITEMS.map((item, index) => (
                 <label key={index} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
                   <input 
@@ -330,7 +536,16 @@ function Calculator() {
       </div>
 
       <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, padding: 24 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: "#64748B", marginBottom: 16, textTransform: "uppercase" }}>Pricing Summary</div>
+        <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap", marginBottom: 16 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: "#64748B", textTransform: "uppercase" }}>Pricing Summary</div>
+          <button
+            type="button"
+            onClick={handleSavePdf}
+            style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #0D9488", background: "#0D9488", color: "#fff", fontWeight: 600, cursor: "pointer" }}
+          >
+            Save to PDF
+          </button>
+        </div>
 
         {needsCustomPricing && (
           <div style={{ background: "#F0FDFA", border: "1px solid #99F6E4", borderRadius: 8, padding: 16, color: "#134E4A", fontWeight: 600, marginBottom: 16 }}>
