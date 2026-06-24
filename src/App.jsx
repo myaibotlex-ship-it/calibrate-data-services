@@ -175,9 +175,9 @@ function SummaryRow({ label, value, negative = false }) {
 }
 
 function Calculator() {
-  const [employees, setEmployees] = useState(250);
+  const [employees, setEmployees] = useState("");
   const [selectedItems, setSelectedItems] = useState([]);
-  const [yearsOfData, setYearsOfData] = useState(5);
+  const [yearsOfData, setYearsOfData] = useState("");
   const [otherItems, setOtherItems] = useState([]);
   const [notes, setNotes] = useState("");
   const [timesheetOption, setTimesheetOption] = useState("monthly");
@@ -198,12 +198,14 @@ function Calculator() {
     options: true,
   });
 
-  const tier = getTier(employees);
+  const employeeCount = Number.parseInt(employees, 10) || 0;
+  const dataYears = Number.parseInt(yearsOfData, 10) || 0;
+  const tier = getTier(employeeCount);
   let itemCost = tier.perItem;
-  if (yearsOfData <= 3) itemCost *= 0.85;
-  else if (yearsOfData >= 10) itemCost *= 1.30;
+  if (dataYears > 0 && dataYears <= 3) itemCost *= 0.85;
+  else if (dataYears >= 10) itemCost *= 1.30;
 
-  const baseFee = getBaseFee(employees);
+  const baseFee = getBaseFee(employeeCount);
   const selectedMigrationItems = selectedItems.map((index) => MIGRATION_ITEMS[index]);
   const needsCustomPricing = otherItems.length > 0;
   const includesTimesheets = selectedMigrationItems.some((item) => item.type === "timesheets");
@@ -213,7 +215,7 @@ function Calculator() {
   const discountedTieredTotal = selectedMigrationItems
     .filter((item) => item.type === "discountedTiered")
     .reduce((total, item) => total + (itemCost * (1 - item.discount)), 0);
-  const timesheetsTotal = includesTimesheets ? TIMESHEET_OPTIONS[timesheetOption].annualRate * yearsOfData : 0;
+  const timesheetsTotal = includesTimesheets ? TIMESHEET_OPTIONS[timesheetOption].annualRate * dataYears : 0;
   const dataMigrationTotal = (tieredItemCount * itemCost) + halfTieredTotal + discountedTieredTotal;
   const migrationItemsTotal = dataMigrationTotal + timesheetsTotal;
   const migrationSubtotal = selectedItems.length > 0 ? baseFee + migrationItemsTotal : 0;
@@ -228,11 +230,11 @@ function Calculator() {
     const issues = [];
     if (!clientComplete) issues.push("Add a client or company name.");
     if (!firstSystemComplete) issues.push("Add the primary extraction and destination systems.");
-    if (employees <= 0) issues.push("Enter employee count.");
-    if (yearsOfData <= 0) issues.push("Enter years of data.");
+    if (employeeCount <= 0) issues.push("Enter employee count.");
+    if (dataYears <= 0) issues.push("Enter years of data.");
     if (!itemsComplete) issues.push("Select at least one migration item or add an other item.");
     return issues;
-  }, [clientComplete, employees, firstSystemComplete, itemsComplete, yearsOfData]);
+  }, [clientComplete, dataYears, employeeCount, firstSystemComplete, itemsComplete]);
   const quoteReady = quoteIssues.length === 0;
 
   const toggleSection = (id) => {
@@ -365,8 +367,8 @@ function Calculator() {
     });
 
     sectionTitle("Project Details");
-    labelValue("Employees", employees.toLocaleString("en-US"));
-    labelValue("Years of Data", yearsOfData);
+    labelValue("Employees (active + terminated)", employeeCount.toLocaleString("en-US"));
+    labelValue("Years of Data", dataYears);
     labelValue("Selected Items", selectedMigrationItems.map((item) => item.label).join(", ") || "None selected");
     if (includesTimesheets) labelValue("Timesheet Report Frequency", TIMESHEET_OPTIONS[timesheetOption].label);
     if (extractionOnly) labelValue("Extraction Only", "30% discount applied");
@@ -428,7 +430,7 @@ function Calculator() {
             {[
               ["1", "Client", clientComplete],
               ["2", "Systems", firstSystemComplete],
-              ["3", "Scope", employees > 0 && yearsOfData > 0],
+              ["3", "Scope", employeeCount > 0 && dataYears > 0],
               ["4", "Items", itemsComplete],
             ].map(([number, label, complete]) => (
               <span className={`step-pill ${complete ? "complete" : ""}`} key={label}>
@@ -508,17 +510,17 @@ function Calculator() {
             id="scope"
             step="3"
             title="Project Scope"
-            complete={employees > 0 && yearsOfData > 0}
+            complete={employeeCount > 0 && dataYears > 0}
             open={openSections.scope}
             onToggle={toggleSection}
           >
             <div className="form-grid compact">
-              <Field label="Employees">
+              <Field label="Employees (active + terminated)">
                 <input
                   type="text"
                   inputMode="numeric"
                   value={employees}
-                  onChange={(e) => setEmployees(Math.max(0, parseInt(e.target.value) || 0))}
+                  onChange={(e) => setEmployees(e.target.value.replace(/\D/g, ""))}
                   className="large-input"
                 />
               </Field>
@@ -527,13 +529,14 @@ function Calculator() {
                   type="text"
                   inputMode="numeric"
                   value={yearsOfData}
-                  onChange={(e) => setYearsOfData(Math.max(0, parseInt(e.target.value) || 0))}
+                  onChange={(e) => setYearsOfData(e.target.value.replace(/\D/g, ""))}
                   className="large-input"
                 />
                 <small>
-                  {yearsOfData <= 3 && "15% discount applied"}
-                  {yearsOfData >= 10 && "30% premium applied"}
-                  {yearsOfData > 3 && yearsOfData < 10 && "Standard data range"}
+                  {dataYears === 0 && "Enter years of data"}
+                  {dataYears > 0 && dataYears <= 3 && "15% discount applied"}
+                  {dataYears >= 10 && "30% premium applied"}
+                  {dataYears > 3 && dataYears < 10 && "Standard data range"}
                 </small>
               </Field>
             </div>
@@ -708,8 +711,8 @@ function Calculator() {
 
           <div className="summary-meta">
             <span>{selectedItems.length} standard item{selectedItems.length === 1 ? "" : "s"} selected</span>
-            <span>{tier.label} employees</span>
-            <span>{yearsOfData} year{yearsOfData === 1 ? "" : "s"} of data</span>
+            <span>{employeeCount > 0 ? tier.label : "No"} employees</span>
+            <span>{dataYears} year{dataYears === 1 ? "" : "s"} of data</span>
           </div>
         </aside>
       </div>
