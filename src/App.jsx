@@ -533,7 +533,6 @@ function Calculator() {
                   className="large-input"
                 />
                 <small>
-                  {dataYears === 0 && "Enter years of data"}
                   {dataYears > 0 && dataYears <= 3 && "15% discount applied"}
                   {dataYears >= 10 && "30% premium applied"}
                   {dataYears > 3 && dataYears < 10 && "Standard data range"}
