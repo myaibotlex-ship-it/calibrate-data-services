@@ -23,8 +23,7 @@ const MIGRATION_ITEMS = [
   { label: "Performance reviews", type: "tiered" },
   { label: "Employee action forms", type: "tiered" },
   { label: "ATS data - applications and resumes", type: "tiered" },
-  { label: "Learning course completion history", type: "tiered" },
-  { label: "Other item", type: "custom" }
+  { label: "Learning course completion history", type: "tiered" }
 ];
 
 const getBaseFee = (ee) => ee <= 1500 ? 1000 : 1500;
@@ -80,7 +79,7 @@ function Calculator() {
   const [employees, setEmployees] = useState(250);
   const [selectedItems, setSelectedItems] = useState([]);
   const [yearsOfData, setYearsOfData] = useState(5);
-  const [otherItem, setOtherItem] = useState("");
+  const [otherItems, setOtherItems] = useState([]);
   const [timesheetOption, setTimesheetOption] = useState("monthly");
   const [includeLearningCertificates, setIncludeLearningCertificates] = useState(false);
   const [extractionOnly, setExtractionOnly] = useState(false);
@@ -93,7 +92,7 @@ function Calculator() {
 
   const baseFee = getBaseFee(employees);
   const selectedMigrationItems = selectedItems.map((index) => MIGRATION_ITEMS[index]);
-  const needsCustomPricing = selectedMigrationItems.some((item) => item.type === "custom");
+  const needsCustomPricing = otherItems.length > 0;
   const includesTimesheets = selectedMigrationItems.some((item) => item.type === "timesheets");
   const includesLearningHistory = selectedMigrationItems.some((item) => item.label === LEARNING_HISTORY_LABEL);
   const tieredItemCount = selectedMigrationItems.filter((item) => item.type === "tiered").length;
@@ -129,6 +128,20 @@ function Calculator() {
 
   const removeSystem = (index) => {
     setSystems(systems.filter((_, currentIndex) => currentIndex !== index));
+  };
+
+  const addOtherItem = () => {
+    setOtherItems([...otherItems, ""]);
+  };
+
+  const updateOtherItem = (index, value) => {
+    setOtherItems(otherItems.map((item, currentIndex) => (
+      currentIndex === index ? value : item
+    )));
+  };
+
+  const removeOtherItem = (index) => {
+    setOtherItems(otherItems.filter((_, currentIndex) => currentIndex !== index));
   };
 
   return (
@@ -231,18 +244,6 @@ function Calculator() {
                 </label>
               ))}
             </div>
-            {needsCustomPricing && (
-              <div style={{ marginTop: 12 }}>
-                <label style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase" }}>Other Item Details</label>
-                <input
-                  type="text"
-                  value={otherItem}
-                  onChange={(e) => setOtherItem(e.target.value)}
-                  placeholder="Describe the item you need priced"
-                  style={{ width: "100%", marginTop: 6, padding: "12px 14px", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: 15 }}
-                />
-              </div>
-            )}
             {includesTimesheets && (
               <div style={{ marginTop: 12 }}>
                 <label style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase" }}>Timesheet Pricing</label>
@@ -272,15 +273,59 @@ function Calculator() {
                 Learning certificates
               </label>
             )}
-            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer", marginTop: 16 }}>
-              <input
-                type="checkbox"
-                checked={extractionOnly}
-                onChange={(e) => setExtractionOnly(e.target.checked)}
-              />
-              Extraction only
-            </label>
           </div>
+        </div>
+      </div>
+
+      <div style={{ background: "#fff", border: "1px solid #E2E8F0", borderRadius: 12, padding: 24, marginBottom: 24 }}>
+        <div style={{ fontSize: 13, fontWeight: 600, color: "#64748B", marginBottom: 16, textTransform: "uppercase" }}>Additional Options</div>
+
+        <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
+          <input
+            type="checkbox"
+            checked={extractionOnly}
+            onChange={(e) => setExtractionOnly(e.target.checked)}
+          />
+          Extraction only
+        </label>
+
+        <div style={{ marginTop: 18 }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase" }}>Other Items</div>
+              <div style={{ color: "#64748B", fontSize: 13, marginTop: 4 }}>Items outside the standard list will need custom pricing.</div>
+            </div>
+            <button
+              type="button"
+              onClick={addOtherItem}
+              style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #0D9488", background: "#F0FDFA", color: "#0F766E", fontWeight: 600, cursor: "pointer" }}
+            >
+              Add other item
+            </button>
+          </div>
+
+          {otherItems.length > 0 && (
+            <div style={{ display: "grid", gap: 10, marginTop: 12 }}>
+              {otherItems.map((item, index) => (
+                <div key={index} style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                  <input
+                    type="text"
+                    value={item}
+                    onChange={(e) => updateOtherItem(index, e.target.value)}
+                    placeholder="Describe the item you need priced"
+                    style={{ flex: "1 1 auto", minWidth: 0, padding: "12px 14px", borderRadius: 8, border: "1px solid #E2E8F0", fontSize: 15 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => removeOtherItem(index)}
+                    style={{ padding: "10px 12px", borderRadius: 8, border: "1px solid #E2E8F0", background: "#fff", color: "#64748B", cursor: "pointer" }}
+                  >
+                    Remove
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -289,41 +334,45 @@ function Calculator() {
 
         {needsCustomPricing && (
           <div style={{ background: "#F0FDFA", border: "1px solid #99F6E4", borderRadius: 8, padding: 16, color: "#134E4A", fontWeight: 600, marginBottom: 16 }}>
-            Custom pricing needed{otherItem.trim() ? ` for ${otherItem.trim()}` : ""}
+            Custom pricing needed for other item{otherItems.length > 1 ? "s" : ""}
+            {otherItems.some((item) => item.trim()) ? `: ${otherItems.filter((item) => item.trim()).join(", ")}` : ""}
           </div>
         )}
         
-        {!needsCustomPricing && (
-          <>
+        <>
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E2E8F0" }}>
+            <div>Base Fee</div>
+            <div style={{ fontWeight: 600 }}>{fmt(baseFee)}</div>
+          </div>
+          
+          <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E2E8F0" }}>
+            <div>Data Migration</div>
+            <div style={{ fontWeight: 600 }}>{fmt(dataMigrationTotal)}</div>
+          </div>
+
+          {includesTimesheets && (
             <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E2E8F0" }}>
-              <div>Base Fee</div>
-              <div style={{ fontWeight: 600 }}>{fmt(baseFee)}</div>
+              <div>Timesheets</div>
+              <div style={{ fontWeight: 600 }}>{fmt(timesheetsTotal)}</div>
             </div>
-            
+          )}
+
+          {extractionOnly && migrationSubtotal > 0 && (
             <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E2E8F0" }}>
-              <div>Data Migration</div>
-              <div style={{ fontWeight: 600 }}>{fmt(dataMigrationTotal)}</div>
+              <div>Extraction Only Discount</div>
+              <div style={{ fontWeight: 600 }}>-{fmt(extractionOnlyDiscount)}</div>
             </div>
+          )}
 
-            {includesTimesheets && (
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E2E8F0" }}>
-                <div>Timesheets</div>
-                <div style={{ fontWeight: 600 }}>{fmt(timesheetsTotal)}</div>
-              </div>
-            )}
-
-            {extractionOnly && migrationSubtotal > 0 && (
-              <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E2E8F0" }}>
-                <div>Extraction Only Discount</div>
-                <div style={{ fontWeight: 600 }}>-{fmt(extractionOnlyDiscount)}</div>
-              </div>
-            )}
-
-            <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 16, marginTop: 8, fontSize: 18, fontWeight: 700 }}>
-              <div>Total</div>
-              <div style={{ color: "#0D9488" }}>{fmt(migrationTotal)}</div>
-            </div>
-          </>
+          <div style={{ display: "flex", justifyContent: "space-between", paddingTop: 16, marginTop: 8, fontSize: 18, fontWeight: 700 }}>
+            <div>Total</div>
+            <div style={{ color: "#0D9488" }}>{fmt(migrationTotal)}</div>
+          </div>
+        </>
+        {needsCustomPricing && (
+          <div style={{ color: "#64748B", fontSize: 13, marginTop: 12 }}>
+            Total shown excludes custom-priced other items.
+          </div>
         )}
       </div>
     </div>
