@@ -17,10 +17,16 @@ const MIGRATION_GROUPS = [
   {
     name: "Employee Data",
     items: [
-      { label: "Pay stubs", type: "tiered" },
-      { label: "Timecards", type: "tiered" },
       { label: "HR documents (includes i9s, handbooks etc)", type: "tiered" },
       { label: "Employee action forms", type: "tiered" },
+      { label: "Performance reviews", type: "tiered" },
+    ],
+  },
+  {
+    name: "Payroll",
+    items: [
+      { label: "Pay stubs", type: "tiered" },
+      { label: "Check registers", type: "tiered" },
     ],
   },
   {
@@ -34,19 +40,20 @@ const MIGRATION_GROUPS = [
     name: "Learning",
     items: [
       { label: "Learning course completion history", type: "tiered" },
+      { label: "Learning certificates", type: "halfTiered" },
     ],
   },
   {
     name: "Time & Attendance",
     items: [
-      { label: "Timesheets", type: "timesheets" },
+      { label: "Timecards", type: "tiered" },
+      { label: "Timesheet reports", type: "timesheets" },
     ],
   },
   {
     name: "Recruiting",
     items: [
       { label: "ATS data - applications and resumes", type: "tiered" },
-      { label: "Performance reviews", type: "tiered" },
     ],
   },
 ];
@@ -59,8 +66,6 @@ const TIMESHEET_OPTIONS = {
   monthly: { label: "By month", annualRate: 200 },
   payPeriod: { label: "By pay period", annualRate: 300 },
 };
-
-const LEARNING_HISTORY_LABEL = "Learning course completion history";
 
 const getBaseFee = (ee) => ee <= 1500 ? 1000 : 1500;
 const getTier = (ee) => TIERS.find((t) => ee >= t.min && ee <= t.max) || TIERS[TIERS.length - 1];
@@ -173,7 +178,6 @@ function Calculator() {
   const [yearsOfData, setYearsOfData] = useState(5);
   const [otherItems, setOtherItems] = useState([]);
   const [timesheetOption, setTimesheetOption] = useState("monthly");
-  const [includeLearningCertificates, setIncludeLearningCertificates] = useState(false);
   const [extractionOnly, setExtractionOnly] = useState(false);
   const [systems, setSystems] = useState([{ from: "", to: "" }]);
   const [clientInfo, setClientInfo] = useState({
@@ -200,11 +204,11 @@ function Calculator() {
   const selectedMigrationItems = selectedItems.map((index) => MIGRATION_ITEMS[index]);
   const needsCustomPricing = otherItems.length > 0;
   const includesTimesheets = selectedMigrationItems.some((item) => item.type === "timesheets");
-  const includesLearningHistory = selectedMigrationItems.some((item) => item.label === LEARNING_HISTORY_LABEL);
   const tieredItemCount = selectedMigrationItems.filter((item) => item.type === "tiered").length;
-  const learningCertificatesTotal = includesLearningHistory && includeLearningCertificates ? itemCost * 0.50 : 0;
+  const halfTieredItemCount = selectedMigrationItems.filter((item) => item.type === "halfTiered").length;
+  const halfTieredTotal = halfTieredItemCount * itemCost * 0.50;
   const timesheetsTotal = includesTimesheets ? TIMESHEET_OPTIONS[timesheetOption].annualRate * yearsOfData : 0;
-  const dataMigrationTotal = (tieredItemCount * itemCost) + learningCertificatesTotal;
+  const dataMigrationTotal = (tieredItemCount * itemCost) + halfTieredTotal;
   const migrationItemsTotal = dataMigrationTotal + timesheetsTotal;
   const migrationSubtotal = selectedItems.length > 0 ? baseFee + migrationItemsTotal : 0;
   const extractionOnlyDiscount = extractionOnly ? migrationSubtotal * 0.30 : 0;
@@ -230,11 +234,7 @@ function Calculator() {
   };
 
   const toggleItem = (index) => {
-    const item = MIGRATION_ITEMS[index];
     if (selectedItems.includes(index)) {
-      if (item.label === LEARNING_HISTORY_LABEL) {
-        setIncludeLearningCertificates(false);
-      }
       setSelectedItems(selectedItems.filter((i) => i !== index));
     } else {
       setSelectedItems([...selectedItems, index]);
@@ -362,8 +362,7 @@ function Calculator() {
     labelValue("Employees", employees.toLocaleString("en-US"));
     labelValue("Years of Data", yearsOfData);
     labelValue("Selected Items", selectedMigrationItems.map((item) => item.label).join(", ") || "None selected");
-    if (includesTimesheets) labelValue("Timesheet Pricing", TIMESHEET_OPTIONS[timesheetOption].label);
-    if (includeLearningCertificates) labelValue("Learning Certificates", "Included");
+    if (includesTimesheets) labelValue("Timesheet Report Frequency", TIMESHEET_OPTIONS[timesheetOption].label);
     if (extractionOnly) labelValue("Extraction Only", "30% discount applied");
     if (otherItems.length > 0) {
       labelValue("Other Items", trimmedOtherItems.join(", ") || "Custom items requested");
@@ -372,7 +371,7 @@ function Calculator() {
     sectionTitle(needsCustomPricing ? "Partial Pricing Summary" : "Pricing Summary");
     summaryRow("Base Fee", fmt(baseFee));
     summaryRow("Data Migration", fmt(dataMigrationTotal));
-    if (includesTimesheets) summaryRow("Timesheets", fmt(timesheetsTotal));
+    if (includesTimesheets) summaryRow("Timesheet Reports", fmt(timesheetsTotal));
     if (extractionOnly && migrationSubtotal > 0) summaryRow("Extraction Only Discount", `-${fmt(extractionOnlyDiscount)}`);
     y += 4;
     doc.setDrawColor(226, 232, 240);
@@ -549,53 +548,38 @@ function Calculator() {
                     {group.items.map((item) => {
                       const index = MIGRATION_ITEMS.findIndex((migrationItem) => migrationItem.label === item.label);
                       return (
-                        <label className="checkbox-card" key={item.label}>
-                          <input
-                            type="checkbox"
-                            checked={selectedItems.includes(index)}
-                            onChange={() => toggleItem(index)}
-                          />
-                          <span>{item.label}</span>
-                        </label>
+                        <div className="item-with-options" key={item.label}>
+                          <label className="checkbox-card">
+                            <input
+                              type="checkbox"
+                              checked={selectedItems.includes(index)}
+                              onChange={() => toggleItem(index)}
+                            />
+                            <span>{item.label}</span>
+                          </label>
+                          {item.type === "timesheets" && selectedItems.includes(index) && (
+                            <div className="inline-options">
+                              {Object.entries(TIMESHEET_OPTIONS).map(([value, option]) => (
+                                <label className={timesheetOption === value ? "selected" : ""} key={value}>
+                                  <input
+                                    type="radio"
+                                    name="timesheet-option"
+                                    value={value}
+                                    checked={timesheetOption === value}
+                                    onChange={() => setTimesheetOption(value)}
+                                  />
+                                  {option.label}
+                                </label>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                       );
                     })}
                   </div>
                 </div>
               ))}
             </div>
-
-            {includesTimesheets && (
-              <div className="sub-panel">
-                <h3>Timesheets</h3>
-                <div className="segmented-control">
-                  {Object.entries(TIMESHEET_OPTIONS).map(([value, option]) => (
-                    <label className={timesheetOption === value ? "selected" : ""} key={value}>
-                      <input
-                        type="radio"
-                        name="timesheet-option"
-                        value={value}
-                        checked={timesheetOption === value}
-                        onChange={() => setTimesheetOption(value)}
-                      />
-                      {option.label}
-                    </label>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {includesLearningHistory && (
-              <div className="sub-panel">
-                <label className="checkbox-card inline">
-                  <input
-                    type="checkbox"
-                    checked={includeLearningCertificates}
-                    onChange={(e) => setIncludeLearningCertificates(e.target.checked)}
-                  />
-                  <span>Learning certificates</span>
-                </label>
-              </div>
-            )}
           </CollapsibleSection>
 
           <CollapsibleSection
@@ -685,7 +669,7 @@ function Calculator() {
           <div className="summary-lines">
             <SummaryRow label="Base Fee" value={fmt(baseFee)} />
             <SummaryRow label="Data Migration" value={fmt(dataMigrationTotal)} />
-            {includesTimesheets && <SummaryRow label="Timesheets" value={fmt(timesheetsTotal)} />}
+            {includesTimesheets && <SummaryRow label="Timesheet Reports" value={fmt(timesheetsTotal)} />}
             {extractionOnly && migrationSubtotal > 0 && (
               <SummaryRow label="Extraction Only Discount" value={fmt(extractionOnlyDiscount)} negative />
             )}
