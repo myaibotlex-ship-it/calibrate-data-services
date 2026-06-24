@@ -18,7 +18,7 @@ const MIGRATION_ITEMS = [
   { label: "W-2s", type: "tiered" },
   { label: "1095-Cs", type: "tiered" },
   { label: "Timecards", type: "tiered" },
-  { label: "Timesheets - monthly", type: "annual", annualRate: 350 },
+  { label: "Timesheets", type: "timesheets" },
   { label: "HR documents (includes i9s, handbooks etc)", type: "tiered" },
   { label: "Performance reviews", type: "tiered" },
   { label: "Employee action forms", type: "tiered" },
@@ -30,6 +30,10 @@ const MIGRATION_ITEMS = [
 const getBaseFee = (ee) => ee <= 1500 ? 1000 : 1500;
 const getTier = (ee) => TIERS.find((t) => ee >= t.min && ee <= t.max) || TIERS[TIERS.length - 1];
 const fmt = (n) => n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 });
+const TIMESHEET_OPTIONS = {
+  monthly: { label: "By month", annualRate: 350 },
+  payPeriod: { label: "By pay period", annualRate: 450 },
+};
 
 function LoginPage({ onLogin }) {
   const [password, setPassword] = useState("");
@@ -76,6 +80,7 @@ function Calculator() {
   const [selectedItems, setSelectedItems] = useState([]);
   const [yearsOfData, setYearsOfData] = useState(5);
   const [otherItem, setOtherItem] = useState("");
+  const [timesheetOption, setTimesheetOption] = useState("monthly");
 
   const tier = getTier(employees);
   let itemCost = tier.perItem;
@@ -85,11 +90,10 @@ function Calculator() {
   const baseFee = getBaseFee(employees);
   const selectedMigrationItems = selectedItems.map((index) => MIGRATION_ITEMS[index]);
   const needsCustomPricing = selectedMigrationItems.some((item) => item.type === "custom");
+  const includesTimesheets = selectedMigrationItems.some((item) => item.type === "timesheets");
   const tieredItemCount = selectedMigrationItems.filter((item) => item.type === "tiered").length;
-  const annualItemsTotal = selectedMigrationItems
-    .filter((item) => item.type === "annual")
-    .reduce((total, item) => total + (item.annualRate * yearsOfData), 0);
-  const migrationItemsTotal = (tieredItemCount * itemCost) + annualItemsTotal;
+  const timesheetsTotal = includesTimesheets ? TIMESHEET_OPTIONS[timesheetOption].annualRate * yearsOfData : 0;
+  const migrationItemsTotal = (tieredItemCount * itemCost) + timesheetsTotal;
   const migrationTotal = selectedItems.length > 0 ? baseFee + migrationItemsTotal : 0;
 
   const toggleItem = (index) => {
@@ -162,6 +166,25 @@ function Calculator() {
                 />
               </div>
             )}
+            {includesTimesheets && (
+              <div style={{ marginTop: 12 }}>
+                <label style={{ fontSize: 12, fontWeight: 600, color: "#64748B", textTransform: "uppercase" }}>Timesheet Pricing</label>
+                <div style={{ display: "flex", gap: 16, marginTop: 8, flexWrap: "wrap" }}>
+                  {Object.entries(TIMESHEET_OPTIONS).map(([value, option]) => (
+                    <label key={value} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 14, cursor: "pointer" }}>
+                      <input
+                        type="radio"
+                        name="timesheet-option"
+                        value={value}
+                        checked={timesheetOption === value}
+                        onChange={() => setTimesheetOption(value)}
+                      />
+                      {option.label}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -187,10 +210,10 @@ function Calculator() {
               <div style={{ fontWeight: 600 }}>{fmt(tieredItemCount * itemCost)}</div>
             </div>
 
-            {annualItemsTotal > 0 && (
+            {includesTimesheets && (
               <div style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: "1px solid #E2E8F0" }}>
-                <div>Timesheets - monthly ({fmt(350)} × {yearsOfData} years)</div>
-                <div style={{ fontWeight: 600 }}>{fmt(annualItemsTotal)}</div>
+                <div>Timesheets</div>
+                <div style={{ fontWeight: 600 }}>{fmt(timesheetsTotal)}</div>
               </div>
             )}
 
