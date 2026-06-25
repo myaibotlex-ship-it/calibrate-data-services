@@ -19,6 +19,7 @@ const MIGRATION_GROUPS = [
   {
     name: "Employee Data",
     items: [
+      { label: "Employee demographic data", type: "perEmployee", rate: 1 },
       { label: "HR documents (includes i9s, handbooks etc)", type: "tiered" },
       { label: "Employee action forms", type: "tiered" },
       { label: "Performance reviews", type: "tiered" },
@@ -36,6 +37,12 @@ const MIGRATION_GROUPS = [
     items: [
       { label: "W-2s", type: "tiered" },
       { label: "1095-Cs", type: "tiered" },
+    ],
+  },
+  {
+    name: "Benefits",
+    items: [
+      { label: "Employee benefits reports", type: "flatFee", amount: 500 },
     ],
   },
   {
@@ -209,16 +216,24 @@ function Calculator() {
   const selectedMigrationItems = selectedItems.map((index) => MIGRATION_ITEMS[index]);
   const needsCustomPricing = otherItems.length > 0;
   const includesTimesheets = selectedMigrationItems.some((item) => item.type === "timesheets");
+  const baseFeeEligibleItems = selectedMigrationItems.filter((item) => !["perEmployee", "flatFee"].includes(item.type));
   const tieredItemCount = selectedMigrationItems.filter((item) => item.type === "tiered").length;
   const halfTieredItemCount = selectedMigrationItems.filter((item) => item.type === "halfTiered").length;
   const halfTieredTotal = halfTieredItemCount * itemCost * 0.50;
   const discountedTieredTotal = selectedMigrationItems
     .filter((item) => item.type === "discountedTiered")
     .reduce((total, item) => total + (itemCost * (1 - item.discount)), 0);
+  const perEmployeeTotal = selectedMigrationItems
+    .filter((item) => item.type === "perEmployee")
+    .reduce((total, item) => total + (employeeCount * item.rate), 0);
+  const flatFeeTotal = selectedMigrationItems
+    .filter((item) => item.type === "flatFee")
+    .reduce((total, item) => total + item.amount, 0);
   const timesheetsTotal = includesTimesheets ? TIMESHEET_OPTIONS[timesheetOption].annualRate * dataYears : 0;
-  const dataMigrationTotal = (tieredItemCount * itemCost) + halfTieredTotal + discountedTieredTotal;
+  const dataMigrationTotal = (tieredItemCount * itemCost) + halfTieredTotal + discountedTieredTotal + perEmployeeTotal + flatFeeTotal;
   const migrationItemsTotal = dataMigrationTotal + timesheetsTotal;
-  const migrationSubtotal = selectedItems.length > 0 ? baseFee + migrationItemsTotal : 0;
+  const appliedBaseFee = selectedItems.length > 0 && baseFeeEligibleItems.length > 0 ? baseFee : 0;
+  const migrationSubtotal = selectedItems.length > 0 ? appliedBaseFee + migrationItemsTotal : 0;
   const extractionOnlyDiscount = extractionOnly ? migrationSubtotal * 0.30 : 0;
   const migrationTotal = migrationSubtotal - extractionOnlyDiscount;
 
@@ -226,15 +241,18 @@ function Calculator() {
   const firstSystemComplete = Boolean(systems[0]?.from.trim() && systems[0]?.to.trim());
   const clientComplete = Boolean(clientInfo.name.trim() || clientInfo.company.trim());
   const itemsComplete = selectedItems.length > 0 || needsCustomPricing;
+  const requiresEmployeeCount = selectedItems.length === 0 || selectedMigrationItems.some((item) => item.type !== "flatFee");
+  const requiresYearsOfData = selectedItems.length === 0 || selectedMigrationItems.some((item) => ["tiered", "halfTiered", "discountedTiered", "timesheets"].includes(item.type));
+  const scopeComplete = (!requiresEmployeeCount || employeeCount > 0) && (!requiresYearsOfData || dataYears > 0);
   const quoteIssues = useMemo(() => {
     const issues = [];
     if (!clientComplete) issues.push("Add a client or company name.");
     if (!firstSystemComplete) issues.push("Add the primary extraction and destination systems.");
-    if (employeeCount <= 0) issues.push("Enter employee count.");
-    if (dataYears <= 0) issues.push("Enter years of data.");
+    if (requiresEmployeeCount && employeeCount <= 0) issues.push("Enter employee count.");
+    if (requiresYearsOfData && dataYears <= 0) issues.push("Enter years of data.");
     if (!itemsComplete) issues.push("Select at least one migration item or add an other item.");
     return issues;
-  }, [clientComplete, dataYears, employeeCount, firstSystemComplete, itemsComplete]);
+  }, [clientComplete, dataYears, employeeCount, firstSystemComplete, itemsComplete, requiresEmployeeCount, requiresYearsOfData]);
   const quoteReady = quoteIssues.length === 0;
 
   const toggleSection = (id) => {
@@ -378,7 +396,7 @@ function Calculator() {
     labelValue("Notes", notes);
 
     sectionTitle(needsCustomPricing ? "Partial Pricing Summary" : "Pricing Summary");
-    summaryRow("Base Fee", fmt(baseFee));
+    summaryRow("Base Fee", fmt(appliedBaseFee));
     summaryRow("Data Migration", fmt(dataMigrationTotal));
     if (includesTimesheets) summaryRow("Timesheet Reports", fmt(timesheetsTotal));
     if (extractionOnly && migrationSubtotal > 0) summaryRow("Extraction Only Discount", `-${fmt(extractionOnlyDiscount)}`);
@@ -430,7 +448,7 @@ function Calculator() {
             {[
               ["1", "Client", clientComplete],
               ["2", "Systems", firstSystemComplete],
-              ["3", "Scope", employeeCount > 0 && dataYears > 0],
+              ["3", "Scope", scopeComplete],
               ["4", "Items", itemsComplete],
             ].map(([number, label, complete]) => (
               <span className={`step-pill ${complete ? "complete" : ""}`} key={label}>
@@ -510,7 +528,7 @@ function Calculator() {
             id="scope"
             step="3"
             title="Project Scope"
-            complete={employeeCount > 0 && dataYears > 0}
+            complete={scopeComplete}
             open={openSections.scope}
             onToggle={toggleSection}
           >
@@ -691,7 +709,7 @@ function Calculator() {
           )}
 
           <div className="summary-lines">
-            <SummaryRow label="Base Fee" value={fmt(baseFee)} />
+            <SummaryRow label="Base Fee" value={fmt(appliedBaseFee)} />
             <SummaryRow label="Data Migration" value={fmt(dataMigrationTotal)} />
             {includesTimesheets && <SummaryRow label="Timesheet Reports" value={fmt(timesheetsTotal)} />}
             {extractionOnly && migrationSubtotal > 0 && (
