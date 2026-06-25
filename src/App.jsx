@@ -76,6 +76,8 @@ const TIMESHEET_OPTIONS = {
   payPeriod: { label: "By pay period", annualRate: 300 },
 };
 
+const PARTNER_DISCOUNT_RATE = 0.10;
+
 const getBaseFee = (ee) => ee <= 1500 ? 1000 : 1500;
 const getTier = (ee) => TIERS.find((t) => ee >= t.min && ee <= t.max) || TIERS[TIERS.length - 1];
 const fmt = (n) => n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 });
@@ -235,7 +237,9 @@ function Calculator() {
   const appliedBaseFee = selectedItems.length > 0 && baseFeeEligibleItems.length > 0 ? baseFee : 0;
   const migrationSubtotal = selectedItems.length > 0 ? appliedBaseFee + migrationItemsTotal : 0;
   const extractionOnlyDiscount = extractionOnly ? migrationSubtotal * 0.30 : 0;
-  const migrationTotal = migrationSubtotal - extractionOnlyDiscount;
+  const totalBeforePartnerDiscount = migrationSubtotal - extractionOnlyDiscount;
+  const partnerDiscount = totalBeforePartnerDiscount * PARTNER_DISCOUNT_RATE;
+  const migrationTotal = totalBeforePartnerDiscount - partnerDiscount;
 
   const trimmedOtherItems = otherItems.map((item) => item.trim()).filter(Boolean);
   const firstSystemComplete = Boolean(systems[0]?.from.trim() && systems[0]?.to.trim());
@@ -400,6 +404,7 @@ function Calculator() {
     summaryRow("Data Migration", fmt(dataMigrationTotal));
     if (includesTimesheets) summaryRow("Timesheet Reports", fmt(timesheetsTotal));
     if (extractionOnly && migrationSubtotal > 0) summaryRow("Extraction Only Discount", `-${fmt(extractionOnlyDiscount)}`);
+    if (partnerDiscount > 0) summaryRow("Partner Discount", `-${fmt(partnerDiscount)}`);
     y += 4;
     doc.setDrawColor(226, 232, 240);
     doc.line(margin, y, pageWidth - margin, y);
@@ -714,6 +719,9 @@ function Calculator() {
             {includesTimesheets && <SummaryRow label="Timesheet Reports" value={fmt(timesheetsTotal)} />}
             {extractionOnly && migrationSubtotal > 0 && (
               <SummaryRow label="Extraction Only Discount" value={fmt(extractionOnlyDiscount)} negative />
+            )}
+            {partnerDiscount > 0 && (
+              <SummaryRow label="Partner Discount" value={fmt(partnerDiscount)} negative />
             )}
           </div>
 
