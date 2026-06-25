@@ -19,7 +19,7 @@ const MIGRATION_GROUPS = [
   {
     name: "Employee Data",
     items: [
-      { label: "Employee demographic data", type: "perEmployee", rate: 1 },
+      { label: "Employee demographic data", type: "demographicTier" },
       { label: "HR documents (includes i9s, handbooks etc)", type: "tiered" },
       { label: "Employee action forms", type: "tiered" },
       { label: "Performance reviews", type: "tiered" },
@@ -76,10 +76,21 @@ const TIMESHEET_OPTIONS = {
   payPeriod: { label: "By pay period", annualRate: 300 },
 };
 
+const DEMOGRAPHIC_TIERS = [
+  { min: 0, max: 500, price: 500 },
+  { min: 501, max: 1500, price: 1000 },
+  { min: 1501, max: 3000, price: 2000 },
+  { min: 3001, max: 5000, price: 2500 },
+  { min: 5001, max: Infinity, price: 3500 },
+];
+
 const PARTNER_DISCOUNT_RATE = 0.10;
 
 const getBaseFee = (ee) => ee <= 1500 ? 1000 : 1500;
 const getTier = (ee) => TIERS.find((t) => ee >= t.min && ee <= t.max) || TIERS[TIERS.length - 1];
+const getDemographicTierPrice = (ee) => (
+  ee > 0 ? DEMOGRAPHIC_TIERS.find((tier) => ee >= tier.min && ee <= tier.max)?.price || 0 : 0
+);
 const fmt = (n) => n.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0 });
 
 const getImageDataUrl = async (src) => {
@@ -218,21 +229,21 @@ function Calculator() {
   const selectedMigrationItems = selectedItems.map((index) => MIGRATION_ITEMS[index]);
   const needsCustomPricing = otherItems.length > 0;
   const includesTimesheets = selectedMigrationItems.some((item) => item.type === "timesheets");
-  const baseFeeEligibleItems = selectedMigrationItems.filter((item) => !["perEmployee", "flatFee"].includes(item.type));
+  const baseFeeEligibleItems = selectedMigrationItems.filter((item) => !["demographicTier", "flatFee"].includes(item.type));
   const tieredItemCount = selectedMigrationItems.filter((item) => item.type === "tiered").length;
   const halfTieredItemCount = selectedMigrationItems.filter((item) => item.type === "halfTiered").length;
   const halfTieredTotal = halfTieredItemCount * itemCost * 0.50;
   const discountedTieredTotal = selectedMigrationItems
     .filter((item) => item.type === "discountedTiered")
     .reduce((total, item) => total + (itemCost * (1 - item.discount)), 0);
-  const perEmployeeTotal = selectedMigrationItems
-    .filter((item) => item.type === "perEmployee")
-    .reduce((total, item) => total + (employeeCount * item.rate), 0);
+  const demographicTierTotal = selectedMigrationItems.some((item) => item.type === "demographicTier")
+    ? getDemographicTierPrice(employeeCount)
+    : 0;
   const flatFeeTotal = selectedMigrationItems
     .filter((item) => item.type === "flatFee")
     .reduce((total, item) => total + item.amount, 0);
   const timesheetsTotal = includesTimesheets ? TIMESHEET_OPTIONS[timesheetOption].annualRate * dataYears : 0;
-  const dataMigrationTotal = (tieredItemCount * itemCost) + halfTieredTotal + discountedTieredTotal + perEmployeeTotal + flatFeeTotal;
+  const dataMigrationTotal = (tieredItemCount * itemCost) + halfTieredTotal + discountedTieredTotal + demographicTierTotal + flatFeeTotal;
   const migrationItemsTotal = dataMigrationTotal + timesheetsTotal;
   const appliedBaseFee = selectedItems.length > 0 && baseFeeEligibleItems.length > 0 ? baseFee : 0;
   const migrationSubtotal = selectedItems.length > 0 ? appliedBaseFee + migrationItemsTotal : 0;
